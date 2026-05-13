@@ -7,7 +7,7 @@ import CalendarView from './components/CalendarView'
 import Statistics from './components/Statistics'
 import ImportExport from './components/ImportExport'
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'
 
 export default function App() {
   const [transactions, setTransactions] = useState([])

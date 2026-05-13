@@ -48,13 +48,24 @@ Click "Deploy" - Vercel will automatically deploy on every push to main!
 6. Start: `npm start`
 7. Deploy!
 
-## Database Considerations
+## Database Options & Configuration
 
-- SQLite works for small deployments
-- For production, consider:
-  - PostgreSQL
-  - MongoDB
-  - Firebase Firestore
+The backend supports both **SQLite** (default) and **MongoDB** out of the box.
+
+### Option A: SQLite (Default)
+- Ideal for quick local testing and small single-instance deployments.
+- Requires zero setup. Data is stored in `backend/money_manager.db`.
+
+### Option B: MongoDB (Recommended for Local/Production Scalability)
+To use MongoDB instead of SQLite:
+1. Ensure MongoDB is running locally or create a free cloud database on [MongoDB Atlas](https://www.mongodb.com/atlas).
+2. Create a `.env` file in the `backend` directory (or configure environment variables in your deployment platform).
+3. Add your connection string:
+   ```env
+   MONGODB_URI=mongodb://localhost:27017/money_manager
+   ```
+   *(Or your standard Atlas connection URI)*
+4. Restart the backend server. It will automatically detect the URI and switch to MongoDB mode!
 
 ## Update Backend URL in Frontend
 
