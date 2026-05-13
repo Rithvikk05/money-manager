@@ -49,7 +49,10 @@ function isExplicitClosing(transaction) {
 }
 
 export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
-  const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
   const [selectedDay, setSelectedDay] = useState(null)
 
   const transactionList = Array.isArray(transactions) ? transactions : []
@@ -68,7 +71,26 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
     return grouped
   }, [transactionList])
 
-  const monthsList = useMemo(() => Object.keys(monthMap).sort((a, b) => (a < b ? 1 : -1)), [monthMap])
+  const monthsList = useMemo(() => {
+    const years = new Set([new Date().getFullYear()])
+    for (const transaction of transactionList) {
+      if (!transaction || !transaction.date) continue
+      const date = parseDate(transaction.date)
+      if (!Number.isNaN(date.getTime())) {
+        years.add(date.getFullYear())
+      }
+    }
+
+    const list = []
+    const sortedYears = Array.from(years).sort((a, b) => b - a) // descending years
+    for (const year of sortedYears) {
+      for (let m = 12; m >= 1; m -= 1) {
+        const mm = String(m).padStart(2, '0')
+        list.push(`${year}-${mm}`)
+      }
+    }
+    return list
+  }, [transactionList])
 
   useEffect(() => {
     if (!selectedMonth && monthsList.length > 0) {
