@@ -61,6 +61,7 @@ app.get('/api/transactions', (req, res) => {
 // Add transaction
 app.post('/api/transactions', (req, res) => {
   const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
+  console.log('POST /api/transactions body:', { date, account, category, subcategory, note, amount, currency, type, description });
   
   db.run(
     `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
@@ -148,6 +149,39 @@ app.get('/api/export/excel', (req, res) => {
   });
 });
 
+// Helper function to convert Excel date serial number to ISO date string
+const excelDateToISO = (excelDate) => {
+  if (!excelDate) return new Date().toISOString().split('T')[0]
+  
+  // If it's already a string in YYYY-MM-DD format, return it
+  if (typeof excelDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(excelDate)) {
+    return excelDate
+  }
+  
+  // If it's an Excel serial number
+  const numDate = parseFloat(excelDate)
+  if (!isNaN(numDate) && numDate > 0) {
+    // Excel date serial starts at 1900-01-01
+    const date = new Date((numDate - 25569) * 86400 * 1000)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  // Try to parse as regular date
+  try {
+    const parsed = new Date(excelDate)
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split('T')[0]
+    }
+  } catch (e) {
+    // Ignore
+  }
+  
+  return new Date().toISOString().split('T')[0]
+}
+
 // Import from Excel
 const upload = multer({ dest: 'uploads/' });
 app.post('/api/import/excel', upload.single('file'), (req, res) => {
@@ -157,33 +191,45 @@ app.post('/api/import/excel', upload.single('file'), (req, res) => {
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
     
     let imported = 0;
-    data.forEach((row) => {
+    let completed = 0;
+    
+    if (data.length === 0) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('File deletion error:', err);
+      });
+      return res.json({ imported: 0, message: 'No data found in Excel file' });
+    }
+
+    data.forEach((row, index) => {
       db.run(
         `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          row.Date || row.date,
-          row.Account || row.account,
-          row.Category || row.category,
-          row.Subcategory || row.subcategory,
-          row.Note || row.note,
-          row.Amount || row.amount,
-          row.INR || row.inr || row.Amount || row.amount,
+          excelDateToISO(row.Date || row.date),
+          row.Account || row.account || 'Cash',
+          row.Category || row.category || 'Other',
+          row.Subcategory || row.subcategory || '',
+          row.Note || row.note || '',
+          parseFloat(row.Amount || row.amount || 0),
+          parseFloat(row.INR || row.inr || row.Amount || row.amount || 0),
           row.Currency || row.currency || 'INR',
           row['Income/Expense'] || row.type || 'Expense',
-          row.Description || row.description
+          row.Description || row.description || ''
         ],
         (err) => {
           if (!err) imported++;
+          completed++;
+          
+          // Send response after all operations complete
+          if (completed === data.length) {
+            fs.unlink(req.file.path, (err) => {
+              if (err) console.error('File deletion error:', err);
+            });
+            res.json({ imported, message: `${imported} transactions imported successfully` });
+          }
         }
       );
     });
-    
-    fs.unlink(req.file.path, (err) => {
-      if (err) console.error('File deletion error:', err);
-    });
-    
-    res.json({ imported, message: `${imported} transactions imported successfully` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
