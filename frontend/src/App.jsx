@@ -3,6 +3,7 @@ import axios from 'axios'
 import Dashboard from './components/Dashboard'
 import TransactionForm from './components/TransactionForm'
 import TransactionTable from './components/TransactionTable'
+import CalendarView from './components/CalendarView'
 import Statistics from './components/Statistics'
 import ImportExport from './components/ImportExport'
 
@@ -15,6 +16,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState(null)
+  const [initialData, setInitialData] = useState(null)
 
   useEffect(() => {
     fetchTransactions()
@@ -76,6 +78,13 @@ export default function App() {
     setActiveTab('add')
   }
 
+  const openAddWithDate = (isoDate) => {
+    setEditingId(null)
+    setEditData(null)
+    setInitialData({ date: isoDate })
+    setActiveTab('add')
+  }
+
   const handleImportSuccess = () => {
     fetchTransactions()
     fetchStats()
@@ -134,6 +143,16 @@ export default function App() {
           >
             📤 Import/Export
           </button>
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'calendar'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-blue-600'
+            }`}
+          >
+            🗓️ Calendar
+          </button>
         </div>
       </nav>
 
@@ -149,6 +168,7 @@ export default function App() {
           <TransactionForm
             onSubmit={handleAddTransaction}
             editData={editData}
+            initialData={initialData}
             onCancel={() => {
               setEditingId(null)
               setEditData(null)
@@ -163,6 +183,10 @@ export default function App() {
             onDelete={handleDelete}
             onEdit={handleEdit}
           />
+        )}
+
+        {!loading && activeTab === 'calendar' && (
+          <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} />
         )}
 
         {!loading && activeTab === 'import-export' && (

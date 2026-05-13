@@ -6,8 +6,103 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const [filterCategory, setFilterCategory] = useState('All')
   const [sortBy, setSortBy] = useState('date-desc')
 
+  // Format date safely and extract month
+  const getYearMonth = (dateString) => {
+    try {
+      if (!dateString) return null
+      
+      // Try parsing as ISO date (YYYY-MM-DD)
+      let date = new Date(dateString)
+      
+      // If invalid, check if it's an Excel serial number
+      if (isNaN(date.getTime())) {
+        const numDate = parseFloat(dateString)
+        if (!isNaN(numDate) && numDate > 0) {
+          // Convert Excel serial number to date
+          date = new Date((numDate - 25569) * 86400 * 1000)
+        } else {
+          // Try DD/MM/YYYY format
+          const parts = dateString.split('/')
+          if (parts.length === 3) {
+            date = new Date(parts[2], parts[1] - 1, parts[0])
+          }
+        }
+      }
+      
+      if (isNaN(date.getTime())) {
+        return null
+      }
+      
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      return `${year}-${month}`
+    } catch (e) {
+      return null
+    }
+  }
+
+  // Parse various date representations into a Date object
+  const parseDate = (dateString) => {
+    try {
+      if (!dateString) return new Date(NaN)
+      let date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        const numDate = parseFloat(dateString)
+        if (!isNaN(numDate) && numDate > 0) {
+          date = new Date((numDate - 25569) * 86400 * 1000)
+        } else {
+          const parts = dateString.split('/')
+          if (parts.length === 3) {
+            date = new Date(parts[2], parts[1] - 1, parts[0])
+          } else {
+            date = new Date(dateString.replace(/-/g, '/'))
+          }
+        }
+      }
+      return date
+    } catch (e) {
+      return new Date(NaN)
+    }
+  }
+
+  // Format date safely
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString) return 'N/A'
+      
+      // Try parsing as ISO date (YYYY-MM-DD)
+      let date = new Date(dateString)
+      
+      // If invalid, check if it's an Excel serial number
+      if (isNaN(date.getTime())) {
+        const numDate = parseFloat(dateString)
+        if (!isNaN(numDate) && numDate > 0) {
+          // Convert Excel serial number to date
+          date = new Date((numDate - 25569) * 86400 * 1000)
+        } else {
+          // Try DD/MM/YYYY format
+          const parts = dateString.split('/')
+          if (parts.length === 3) {
+            date = new Date(parts[2], parts[1] - 1, parts[0])
+          } else {
+            // Try MM/DD/YYYY format
+            date = new Date(dateString.replace(/-/g, '/'))
+          }
+        }
+      }
+      
+      if (isNaN(date.getTime())) {
+        return dateString // Return original string if parsing fails
+      }
+      
+      return date.toLocaleDateString('en-IN')
+    } catch (e) {
+      return dateString
+    }
+  }
+
   // Get unique categories
-  const categories = ['All', ...new Set(transactions.map((t) => t.category))]
+  const categories = ['All', ...new Set(transactions.map((t) => t.category).filter(Boolean))]
 
   // Filter transactions
   let filtered = transactions.filter((t) => {
@@ -26,10 +121,16 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
   // Sort transactions
   filtered = filtered.sort((a, b) => {
     switch (sortBy) {
-      case 'date-desc':
-        return new Date(b.date) - new Date(a.date)
-      case 'date-asc':
-        return new Date(a.date) - new Date(b.date)
+      case 'date-desc': {
+        const ta = parseDate(a.date).getTime() || 0
+        const tb = parseDate(b.date).getTime() || 0
+        return tb - ta
+      }
+      case 'date-asc': {
+        const ta = parseDate(a.date).getTime() || 0
+        const tb = parseDate(b.date).getTime() || 0
+        return ta - tb
+      }
       case 'amount-desc':
         return (b.amount || 0) - (a.amount || 0)
       case 'amount-asc':
@@ -39,8 +140,13 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
     }
   })
 
+  // Calculate categories by month
+  // (Removed monthly category grouping for All Transactions view)
+
   return (
     <div className="space-y-6">
+      {/* Monthly grouping removed: show all transactions in the table below */}
+
       {/* Filters */}
       <div className="card">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">🔍 Filters</h2>
@@ -108,7 +214,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
               <tbody>
                 {filtered.map((transaction, index) => (
                   <tr key={transaction.id} className={`border-b hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-4 py-3 text-gray-700 font-medium">{new Date(transaction.date).toLocaleDateString('en-IN')}</td>
+                    <td className="px-4 py-3 text-gray-700 font-medium">{formatDate(transaction.date)}</td>
                     <td className="px-4 py-3 text-gray-600">{transaction.account}</td>
                     <td className="px-4 py-3">{transaction.category}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{transaction.note}</td>

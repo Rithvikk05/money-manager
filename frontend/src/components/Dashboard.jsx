@@ -1,19 +1,60 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
+const formatDate = (dateString) => {
+  try {
+    if (!dateString) return 'N/A'
+    
+    // Try parsing as ISO date (YYYY-MM-DD)
+    let date = new Date(dateString)
+    
+    // If invalid, check if it's an Excel serial number
+    if (isNaN(date.getTime())) {
+      const numDate = parseFloat(dateString)
+      if (!isNaN(numDate) && numDate > 0) {
+        // Convert Excel serial number to date
+        date = new Date((numDate - 25569) * 86400 * 1000)
+      } else {
+        // Try DD/MM/YYYY format
+        const parts = dateString.split('/')
+        if (parts.length === 3) {
+          date = new Date(parts[2], parts[1] - 1, parts[0])
+        } else {
+          // Try MM/DD/YYYY format
+          date = new Date(dateString.replace(/-/g, '/'))
+        }
+      }
+    }
+    
+    if (isNaN(date.getTime())) {
+      return dateString // Return original string if parsing fails
+    }
+    
+    return date.toLocaleDateString('en-IN')
+  } catch (e) {
+    return dateString
+  }
+}
+
 export default function Dashboard({ transactions, stats }) {
+  const isCarryTransaction = (t) => {
+    const text = ((t.category || '') + ' ' + (t.note || '') + ' ' + (t.description || '')).toLowerCase()
+    return /\b(b\/d|c\/f|balance\s*b|balance\s*c|brought\s+down|carried\s+forward)\b/.test(text)
+  }
+
   const totalIncome = transactions
-    .filter((t) => t.type === 'Income')
+    .filter((t) => t.type === 'Income' && !isCarryTransaction(t))
     .reduce((sum, t) => sum + (t.amount || 0), 0)
 
   const totalExpense = transactions
-    .filter((t) => t.type === 'Expense')
+    .filter((t) => t.type === 'Expense' && !isCarryTransaction(t))
     .reduce((sum, t) => sum + (t.amount || 0), 0)
 
+  // Balance shown in dashboard excludes explicit carry-forward / brought-down balance entries
   const balance = totalIncome - totalExpense
 
   // Category breakdown
   const expenseByCategory = transactions
-    .filter((t) => t.type === 'Expense')
+    .filter((t) => t.type === 'Expense' && !isCarryTransaction(t))
     .reduce((acc, t) => {
       const cat = t.category || 'Other'
       acc[cat] = (acc[cat] || 0) + (t.amount || 0)
@@ -124,7 +165,7 @@ export default function Dashboard({ transactions, stats }) {
             <tbody>
               {transactions.slice(0, 10).map((t) => (
                 <tr key={t.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-700">{new Date(t.date).toLocaleDateString('en-IN')}</td>
+                  <td className="px-4 py-2 text-gray-700">{formatDate(t.date)}</td>
                   <td className="px-4 py-2">{t.category}</td>
                   <td className="px-4 py-2 text-gray-600">{t.note}</td>
                   <td className={`px-4 py-2 text-right font-semibold ${t.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>

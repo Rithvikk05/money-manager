@@ -1,39 +1,58 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-const ACCOUNTS = ['Accounts', 'Cash', 'Card']
+const ACCOUNTS = {
+  'Cash': ['Cash'],
+  'Card': ['🏦 Kotak Bank', '🏦 Union Bank', '🏦 Other Bank']
+}
+
 const CATEGORIES = [
   '🍜 Food',
   '🚖 Transport',
   '🧘🏼 Health',
   '🪑 Household',
-  'Office Work',
+  '💼 Office Work',
+  '🎉 Entertainment',
+  '📚 Education',
+  '🛒 Shopping',
+  '💊 Medicine',
+  '🏠 Rent',
+  '⚡ Utilities',
   'Other',
-  'Cash',
 ]
 const TYPES = ['Income', 'Expense', 'Transfer-Out', 'Transfer-In']
 
-export default function TransactionForm({ onSubmit, editData, onCancel }) {
-  const [formData, setFormData] = useState(
-    editData || {
-      date: new Date().toISOString().split('T')[0],
-      account: '',
-      category: '',
-      subcategory: '',
-      note: '',
-      amount: '',
-      currency: 'INR',
-      type: 'Expense',
-      description: '',
-    }
-  )
+export default function TransactionForm({ onSubmit, editData, onCancel, initialData }) {
+  const defaultData = {
+    date: new Date().toISOString().split('T')[0],
+    accountType: '',
+    account: '',
+    category: '',
+    customCategory: '',
+    note: '',
+    amount: '',
+    currency: 'INR',
+    type: 'Expense',
+    description: '',
+  }
+
+  const [formData, setFormData] = useState(editData || (initialData ? { ...defaultData, ...initialData } : defaultData))
 
   const [errors, setErrors] = useState({})
+  const [useCustomCategory, setUseCustomCategory] = useState(false)
+
+  // Update form when editData or initialData change
+  useEffect(() => {
+    if (editData) setFormData(editData)
+    else if (initialData) setFormData((prev) => ({ ...defaultData, ...initialData }))
+  }, [editData, initialData])
 
   const validateForm = () => {
     const newErrors = {}
     if (!formData.date) newErrors.date = 'Date is required'
+    if (!formData.accountType) newErrors.accountType = 'Account Type is required'
     if (!formData.account) newErrors.account = 'Account is required'
-    if (!formData.category) newErrors.category = 'Category is required'
+    if (!formData.category && !useCustomCategory) newErrors.category = 'Category is required'
+    if (useCustomCategory && !formData.customCategory) newErrors.customCategory = 'Custom category is required'
     if (!formData.amount || formData.amount <= 0) newErrors.amount = 'Amount must be greater than 0'
     if (!formData.type) newErrors.type = 'Type is required'
     setErrors(newErrors)
@@ -48,21 +67,25 @@ export default function TransactionForm({ onSubmit, editData, onCancel }) {
     }))
   }
 
+  const handleAccountTypeChange = (e) => {
+    const { value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      accountType: value,
+      account: value === 'Cash' ? 'Cash' : '',
+    }))
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        account: '',
-        category: '',
-        subcategory: '',
-        note: '',
-        amount: '',
-        currency: 'INR',
-        type: 'Expense',
-        description: '',
-      })
+      const finalData = {
+        ...formData,
+        category: useCustomCategory ? formData.customCategory : formData.category,
+      }
+      onSubmit(finalData)
+      setFormData(initialData ? { ...defaultData, ...initialData } : defaultData)
+      setUseCustomCategory(false)
       alert(editData ? 'Transaction updated!' : 'Transaction added successfully!')
     }
   }
@@ -102,42 +125,85 @@ export default function TransactionForm({ onSubmit, editData, onCancel }) {
               {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
             </div>
 
-            {/* Account */}
+            {/* Account Type */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Account</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
               <select
-                name="account"
-                value={formData.account}
-                onChange={handleChange}
+                name="accountType"
+                value={formData.accountType}
+                onChange={handleAccountTypeChange}
                 className="input-field"
               >
-                <option value="">Select Account</option>
-                {ACCOUNTS.map((acc) => (
-                  <option key={acc} value={acc}>
-                    {acc}
+                <option value="">Select Type</option>
+                {Object.keys(ACCOUNTS).map((type) => (
+                  <option key={type} value={type}>
+                    {type}
                   </option>
                 ))}
               </select>
+              {errors.accountType && <p className="text-red-500 text-sm mt-1">{errors.accountType}</p>}
+            </div>
+
+            {/* Account */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Account</label>
+              {formData.accountType === 'Cash' ? (
+                <input type="text" readOnly value="Cash" className="input-field bg-gray-100" />
+              ) : (
+                <select
+                  name="account"
+                  value={formData.account}
+                  onChange={handleChange}
+                  disabled={!formData.accountType}
+                  className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select Account</option>
+                  {formData.accountType && ACCOUNTS[formData.accountType].map((acc) => (
+                    <option key={acc} value={acc}>
+                      {acc}
+                    </option>
+                  ))}
+                </select>
+              )}
               {errors.account && <p className="text-red-500 text-sm mt-1">{errors.account}</p>}
             </div>
 
             {/* Category */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="input-field"
+              {!useCustomCategory ? (
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="input-field"
+                >
+                  <option value="">Select Category</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  name="customCategory"
+                  value={formData.customCategory}
+                  onChange={handleChange}
+                  placeholder="Enter custom category..."
+                  className="input-field"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setUseCustomCategory(!useCustomCategory)}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-semibold"
               >
-                <option value="">Select Category</option>
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                {useCustomCategory ? '📋 Use Predefined' : '✏️ Add Custom'}
+              </button>
               {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+              {errors.customCategory && <p className="text-red-500 text-sm mt-1">{errors.customCategory}</p>}
             </div>
 
             {/* Amount */}
