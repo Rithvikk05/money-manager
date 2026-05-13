@@ -362,48 +362,81 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
     }
 
     if (useMongo) {
-      const docsToInsert = data.map((row) => {
-        const amountVal = parseFloat(row.Amount || row.amount || 0);
-        return {
-          date: excelDateToISO(row.Date || row.date),
-          account: row.Account || row.account || 'Cash',
-          category: row.Category || row.category || 'Other',
-          subcategory: row.Subcategory || row.subcategory || '',
-          note: row.Note || row.note || '',
+      const docsToInsert = []
+      for (const row of data) {
+        const cleanRow = {}
+        for (const key of Object.keys(row)) {
+          const cleanKey = key.trim().toLowerCase().replace(/[\s/_-]+/g, '')
+          cleanRow[cleanKey] = row[key]
+        }
+
+        const rawAmount = cleanRow.amount !== undefined ? cleanRow.amount : 0
+        let amountVal = parseFloat(rawAmount)
+        if (isNaN(amountVal)) amountVal = 0
+
+        const rawInr = cleanRow.inr !== undefined ? cleanRow.inr : rawAmount
+        let inrVal = parseFloat(rawInr)
+        if (isNaN(inrVal)) inrVal = amountVal
+
+        const rawDate = cleanRow.date !== undefined ? cleanRow.date : new Date().toISOString().split('T')[0]
+        const resolvedType = cleanRow.incomeexpense || cleanRow.type || 'Expense'
+
+        docsToInsert.push({
+          date: excelDateToISO(rawDate),
+          account: String(cleanRow.account || 'Cash').trim(),
+          category: String(cleanRow.category || 'Other').trim(),
+          subcategory: String(cleanRow.subcategory || '').trim(),
+          note: String(cleanRow.note || '').trim(),
           amount: amountVal,
-          inr: parseFloat(row.INR || row.inr || row.Amount || row.amount || 0),
-          currency: row.Currency || row.currency || 'INR',
-          type: row['Income/Expense'] || row.type || 'Expense',
-          description: row.Description || row.description || ''
-        };
-      });
+          inr: inrVal,
+          currency: String(cleanRow.currency || 'INR').trim(),
+          type: String(resolvedType).trim(),
+          description: String(cleanRow.description || '').trim()
+        })
+      }
 
       await Transaction.insertMany(docsToInsert);
       imported = docsToInsert.length;
 
       return res.json({ imported, message: `${imported} transactions imported successfully` });
     } else {
-      data.forEach((row, index) => {
+      data.forEach((row) => {
+        const cleanRow = {}
+        for (const key of Object.keys(row)) {
+          const cleanKey = key.trim().toLowerCase().replace(/[\s/_-]+/g, '')
+          cleanRow[cleanKey] = row[key]
+        }
+
+        const rawAmount = cleanRow.amount !== undefined ? cleanRow.amount : 0
+        let amountVal = parseFloat(rawAmount)
+        if (isNaN(amountVal)) amountVal = 0
+
+        const rawInr = cleanRow.inr !== undefined ? cleanRow.inr : rawAmount
+        let inrVal = parseFloat(rawInr)
+        if (isNaN(inrVal)) inrVal = amountVal
+
+        const rawDate = cleanRow.date !== undefined ? cleanRow.date : new Date().toISOString().split('T')[0]
+        const resolvedType = cleanRow.incomeexpense || cleanRow.type || 'Expense'
+
         db.run(
           `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            excelDateToISO(row.Date || row.date),
-            row.Account || row.account || 'Cash',
-            row.Category || row.category || 'Other',
-            row.Subcategory || row.subcategory || '',
-            row.Note || row.note || '',
-            parseFloat(row.Amount || row.amount || 0),
-            parseFloat(row.INR || row.inr || row.Amount || row.amount || 0),
-            row.Currency || row.currency || 'INR',
-            row['Income/Expense'] || row.type || 'Expense',
-            row.Description || row.description || ''
+            excelDateToISO(rawDate),
+            String(cleanRow.account || 'Cash').trim(),
+            String(cleanRow.category || 'Other').trim(),
+            String(cleanRow.subcategory || '').trim(),
+            String(cleanRow.note || '').trim(),
+            amountVal,
+            inrVal,
+            String(cleanRow.currency || 'INR').trim(),
+            String(resolvedType).trim(),
+            String(cleanRow.description || '').trim()
           ],
           (err) => {
             if (!err) imported++;
             completed++;
 
-            // Send response after all operations complete
             if (completed === data.length) {
               res.json({ imported, message: `${imported} transactions imported successfully` });
             }
