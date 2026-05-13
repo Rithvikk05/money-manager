@@ -341,10 +341,16 @@ const excelDateToISO = (excelDate) => {
 };
 
 // Import from Excel
-const upload = multer({ dest: 'uploads/' });
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 app.post('/api/import/excel', upload.single('file'), async (req, res) => {
   try {
-    const workbook = XLSX.readFile(req.file.path);
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ imported: 0, message: 'No file uploaded' });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
@@ -352,9 +358,6 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
     let completed = 0;
 
     if (data.length === 0) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('File deletion error:', err);
-      });
       return res.json({ imported: 0, message: 'No data found in Excel file' });
     }
 
@@ -378,9 +381,6 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
       await Transaction.insertMany(docsToInsert);
       imported = docsToInsert.length;
 
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('File deletion error:', err);
-      });
       return res.json({ imported, message: `${imported} transactions imported successfully` });
     } else {
       data.forEach((row, index) => {
@@ -405,9 +405,6 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
 
             // Send response after all operations complete
             if (completed === data.length) {
-              fs.unlink(req.file.path, (err) => {
-                if (err) console.error('File deletion error:', err);
-              });
               res.json({ imported, message: `${imported} transactions imported successfully` });
             }
           }
@@ -415,6 +412,7 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
       });
     }
   } catch (error) {
+    console.error('Import error:', error);
     res.status(500).json({ error: error.message });
   }
 });
