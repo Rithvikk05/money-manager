@@ -8,6 +8,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
@@ -50,7 +52,26 @@ transactionSchema.set('toJSON', {
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
-let db;
+// Define User Schema & Model
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  created_at: { type: Date, default: Date.now }
+});
+
+userSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password; // Never expose password
+    return ret;
+  }
+});
+
+const User = mongoose.model('User', userSchema);
 
 if (useMongo) {
   mongoose.connect(process.env.MONGODB_URI)
@@ -65,6 +86,16 @@ if (useMongo) {
 
   // Initialize tables
   db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     db.run(`
       CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +115,254 @@ if (useMongo) {
   });
 }
 
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Middleware to verify JWT token
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
+
+// Helper function to hash password
+const hashPassword = async (password) => {
+  return await bcrypt.hash(password, 10);
+};
+
+// Helper function to compare password
+const comparePassword = async (password, hash) => {
+  return await bcrypt.compare(password, hash);
+};
+
+// Promise wrapper for SQLite db.get
+const dbGet = (db, sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+};
+
+// Promise wrapper for SQLite db.run
+const dbRun = (db, sql, params) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this.lastID);
+    });
+  });
+};
+
 // Routes
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Money Manager API', 
+    version: '2.0.0',
+    status: 'running',
+    database: useMongo ? 'MongoDB' : 'SQLite',
+    endpoints: {
+      auth: ['/api/auth/register', '/api/auth/login'],
+      transactions: ['/api/transactions', '/api/statistics'],
+      import_export: ['/api/import/excel', '/api/export/excel'],
+      health: '/api/health'
+    }
+  });
+});
+
+// User Registration
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, email, password, confirmPassword } = req.body;
+
+    // Validation
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    if (useMongo) {
+      // Check if user exists
+      const existingUser = await User.findOne({
+        $or: [{ username: username.toLowerCase() }, { email: email.toLowerCase() }]
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ error: 'Username or email already exists' });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+
+      // Create user
+      const user = new User({
+        username: username.toLowerCase(),
+        email: email.toLowerCase(),
+        password: hashedPassword
+      });
+
+      await user.save();
+
+      // Generate token
+      const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, {
+        expiresIn: '7d'
+      });
+
+      res.json({
+        message: 'User registered successfully',
+        token,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      });
+    } else {
+      // SQLite version
+      try {
+        const existingUser = await dbGet(
+          db,
+          'SELECT * FROM users WHERE username = ? OR email = ?',
+          [username.toLowerCase(), email.toLowerCase()]
+        );
+
+        if (existingUser) {
+          return res.status(400).json({ error: 'Username or email already exists' });
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        await dbRun(
+          db,
+          'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+          [username.toLowerCase(), email.toLowerCase(), hashedPassword]
+        );
+
+        const newUser = await dbGet(
+          db,
+          'SELECT id, username, email FROM users WHERE username = ?',
+          [username.toLowerCase()]
+        );
+
+        const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, {
+          expiresIn: '7d'
+        });
+
+        res.json({
+          message: 'User registered successfully',
+          token,
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email
+          }
+        });
+      } catch (error) {
+        console.error('Registration error (SQLite):', error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// User Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    if (useMongo) {
+      const user = await User.findOne({ username: username.toLowerCase() });
+
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+
+      const isPasswordValid = await comparePassword(password, user.password);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+
+      const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, {
+        expiresIn: '7d'
+      });
+
+      res.json({
+        message: 'Login successful',
+        token,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      });
+    } else {
+      // SQLite version
+      try {
+        const user = await dbGet(
+          db,
+          'SELECT * FROM users WHERE username = ?',
+          [username.toLowerCase()]
+        );
+
+        if (!user) {
+          return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        const isPasswordValid = await comparePassword(password, user.password);
+
+        if (!isPasswordValid) {
+          return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
+          expiresIn: '7d'
+        });
+
+        res.json({
+          message: 'Login successful',
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email
+          }
+        });
+      } catch (error) {
+        console.error('Login error (SQLite):', error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Get all transactions
 app.get('/api/transactions', async (req, res) => {
@@ -340,6 +618,39 @@ const excelDateToISO = (excelDate) => {
   return new Date().toISOString().split('T')[0];
 };
 
+// Helper function to process row data
+const processRowData = (row) => {
+  const cleanRow = {};
+  for (const key of Object.keys(row)) {
+    const cleanKey = key.trim().toLowerCase().replace(/[\s/_-]+/g, '');
+    cleanRow[cleanKey] = row[key];
+  }
+
+  const rawAmount = cleanRow.amount !== undefined ? cleanRow.amount : 0;
+  let amountVal = parseFloat(rawAmount);
+  if (isNaN(amountVal)) amountVal = 0;
+
+  const rawInr = cleanRow.inr !== undefined ? cleanRow.inr : rawAmount;
+  let inrVal = parseFloat(rawInr);
+  if (isNaN(inrVal)) inrVal = amountVal;
+
+  const rawDate = cleanRow.date !== undefined ? cleanRow.date : new Date().toISOString().split('T')[0];
+  const resolvedType = cleanRow.incomeexpense || cleanRow.type || 'Expense';
+
+  return {
+    date: excelDateToISO(rawDate),
+    account: String(cleanRow.account || 'Cash').trim(),
+    category: String(cleanRow.category || 'Other').trim(),
+    subcategory: String(cleanRow.subcategory || '').trim(),
+    note: String(cleanRow.note || '').trim(),
+    amount: amountVal,
+    inr: inrVal,
+    currency: String(cleanRow.currency || 'INR').trim(),
+    type: String(resolvedType).trim(),
+    description: String(cleanRow.description || '').trim()
+  };
+};
+
 // Import from Excel
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -350,109 +661,104 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
       return res.status(400).json({ imported: 0, message: 'No file uploaded' });
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    console.log('Starting Excel import...');
+    console.log('File size:', req.file.size);
 
-    let imported = 0;
-    let completed = 0;
+    let workbook;
+    try {
+      workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    } catch (parseError) {
+      console.error('Excel parsing error:', parseError);
+      return res.status(400).json({ error: 'Invalid Excel file format' });
+    }
+
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+      return res.status(400).json({ error: 'Excel file has no sheets' });
+    }
+
+    const sheetName = workbook.SheetNames[0];
+    console.log('Reading sheet:', sheetName);
+
+    let data;
+    try {
+      data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    } catch (sheetError) {
+      console.error('Sheet reading error:', sheetError);
+      return res.status(400).json({ error: 'Could not read Excel sheet data' });
+    }
 
     if (data.length === 0) {
       return res.json({ imported: 0, message: 'No data found in Excel file' });
     }
 
+    console.log('Found', data.length, 'rows to import');
+
     if (useMongo) {
-      const docsToInsert = []
-      for (const row of data) {
-        const cleanRow = {}
-        for (const key of Object.keys(row)) {
-          const cleanKey = key.trim().toLowerCase().replace(/[\s/_-]+/g, '')
-          cleanRow[cleanKey] = row[key]
-        }
-
-        const rawAmount = cleanRow.amount !== undefined ? cleanRow.amount : 0
-        let amountVal = parseFloat(rawAmount)
-        if (isNaN(amountVal)) amountVal = 0
-
-        const rawInr = cleanRow.inr !== undefined ? cleanRow.inr : rawAmount
-        let inrVal = parseFloat(rawInr)
-        if (isNaN(inrVal)) inrVal = amountVal
-
-        const rawDate = cleanRow.date !== undefined ? cleanRow.date : new Date().toISOString().split('T')[0]
-        const resolvedType = cleanRow.incomeexpense || cleanRow.type || 'Expense'
-
-        docsToInsert.push({
-          date: excelDateToISO(rawDate),
-          account: String(cleanRow.account || 'Cash').trim(),
-          category: String(cleanRow.category || 'Other').trim(),
-          subcategory: String(cleanRow.subcategory || '').trim(),
-          note: String(cleanRow.note || '').trim(),
-          amount: amountVal,
-          inr: inrVal,
-          currency: String(cleanRow.currency || 'INR').trim(),
-          type: String(resolvedType).trim(),
-          description: String(cleanRow.description || '').trim()
-        })
+      try {
+        const docsToInsert = data.map(row => processRowData(row));
+        await Transaction.insertMany(docsToInsert);
+        console.log('Successfully imported', docsToInsert.length, 'transactions to MongoDB');
+        return res.json({ imported: docsToInsert.length, message: `${docsToInsert.length} transactions imported successfully` });
+      } catch (mongoError) {
+        console.error('MongoDB insertion error:', mongoError);
+        return res.status(500).json({ error: 'Database error: ' + mongoError.message });
       }
-
-      await Transaction.insertMany(docsToInsert);
-      imported = docsToInsert.length;
-
-      return res.json({ imported, message: `${imported} transactions imported successfully` });
     } else {
-      data.forEach((row) => {
-        const cleanRow = {}
-        for (const key of Object.keys(row)) {
-          const cleanKey = key.trim().toLowerCase().replace(/[\s/_-]+/g, '')
-          cleanRow[cleanKey] = row[key]
-        }
-
-        const rawAmount = cleanRow.amount !== undefined ? cleanRow.amount : 0
-        let amountVal = parseFloat(rawAmount)
-        if (isNaN(amountVal)) amountVal = 0
-
-        const rawInr = cleanRow.inr !== undefined ? cleanRow.inr : rawAmount
-        let inrVal = parseFloat(rawInr)
-        if (isNaN(inrVal)) inrVal = amountVal
-
-        const rawDate = cleanRow.date !== undefined ? cleanRow.date : new Date().toISOString().split('T')[0]
-        const resolvedType = cleanRow.incomeexpense || cleanRow.type || 'Expense'
-
-        db.run(
-          `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            excelDateToISO(rawDate),
-            String(cleanRow.account || 'Cash').trim(),
-            String(cleanRow.category || 'Other').trim(),
-            String(cleanRow.subcategory || '').trim(),
-            String(cleanRow.note || '').trim(),
-            amountVal,
-            inrVal,
-            String(cleanRow.currency || 'INR').trim(),
-            String(resolvedType).trim(),
-            String(cleanRow.description || '').trim()
-          ],
-          (err) => {
-            if (!err) imported++;
-            completed++;
-
-            if (completed === data.length) {
-              res.json({ imported, message: `${imported} transactions imported successfully` });
-            }
+      // SQLite with proper async handling
+      try {
+        let imported = 0;
+        for (const row of data) {
+          try {
+            const processedRow = processRowData(row);
+            await dbRun(
+              db,
+              `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                processedRow.date,
+                processedRow.account,
+                processedRow.category,
+                processedRow.subcategory,
+                processedRow.note,
+                processedRow.amount,
+                processedRow.inr,
+                processedRow.currency,
+                processedRow.type,
+                processedRow.description
+              ]
+            );
+            imported++;
+          } catch (rowError) {
+            console.error('Error importing row:', rowError);
+            // Continue with next row instead of failing entirely
           }
-        );
-      });
+        }
+        console.log('Successfully imported', imported, 'transactions to SQLite');
+        return res.json({ imported, message: `${imported} transactions imported successfully` });
+      } catch (sqliteError) {
+        console.error('SQLite error:', sqliteError);
+        return res.status(500).json({ error: 'Database error: ' + sqliteError.message });
+      }
     }
   } catch (error) {
-    console.error('Import error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Unexpected import error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Import failed: ' + errorMessage });
   }
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: `Money Manager API is running using ${useMongo ? 'MongoDB' : 'SQLite'}` });
+});
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: 'Route not found',
+    requested: `${req.method} ${req.path}`,
+    message: 'Please use one of the valid API endpoints. Visit http://localhost:5000 for more info'
+  });
 });
 
 app.listen(port, () => {

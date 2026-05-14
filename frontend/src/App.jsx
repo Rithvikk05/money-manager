@@ -6,13 +6,24 @@ import TransactionTable from './components/TransactionTable'
 import CalendarView from './components/CalendarView'
 import Statistics from './components/Statistics'
 import ImportExport from './components/ImportExport'
+import Auth from './components/Auth'
 
 const API_BASE = import.meta.env.VITE_API_BASE 
   ? (import.meta.env.VITE_API_BASE.startsWith('http') ? import.meta.env.VITE_API_BASE : `https://${import.meta.env.VITE_API_BASE}`)
   : 'http://localhost:5000/api'
 
+// Add JWT token to all requests
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [user, setUser] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [stats, setStats] = useState([])
   const [loading, setLoading] = useState(false)
@@ -22,9 +33,35 @@ export default function App() {
   const [initialData, setInitialData] = useState(null)
 
   useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('token')
+    const userData = localStorage.getItem('user')
+    if (token && userData) {
+      setIsLoggedIn(true)
+      setUser(JSON.parse(userData))
+      fetchTransactions()
+      fetchStats()
+    }
+  }, [])
+
+  const handleLoginSuccess = () => {
+    const userData = localStorage.getItem('user')
+    setUser(JSON.parse(userData))
+    setIsLoggedIn(true)
     fetchTransactions()
     fetchStats()
-  }, [])
+  }
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      setIsLoggedIn(false)
+      setUser(null)
+      setTransactions([])
+      setStats([])
+    }
+  }
 
   const fetchTransactions = async () => {
     try {
@@ -93,13 +130,29 @@ export default function App() {
     fetchStats()
   }
 
+  // Show Auth page if not logged in
+  if (!isLoggedIn) {
+    return <Auth onLoginSuccess={handleLoginSuccess} />
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="gradient-primary text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-4xl font-bold">💰 Money Manager</h1>
-          <p className="text-gray-100 mt-2">Manage your finances with ease</p>
+        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold">💰 Money Manager</h1>
+            <p className="text-gray-100 mt-2">Manage your finances with ease</p>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-semibold">Welcome, {user?.username}!</p>
+            <button
+              onClick={handleLogout}
+              className="mt-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-semibold transition"
+            >
+              🚪 Logout
+            </button>
+          </div>
         </div>
       </header>
 
