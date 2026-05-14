@@ -19,18 +19,7 @@ const getApiBase = () => {
 }
 const API_BASE = getApiBase()
 
-// Add JWT token to all requests
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [user, setUser] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [stats, setStats] = useState([])
   const [loading, setLoading] = useState(false)
@@ -40,15 +29,8 @@ export default function App() {
   const [initialData, setInitialData] = useState(null)
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    if (token && userData) {
-      setIsLoggedIn(true)
-      setUser(JSON.parse(userData))
-      fetchTransactions()
-      fetchStats()
-    }
+    fetchTransactions()
+    fetchStats()
   }, [])
 
   const handleLoginSuccess = () => {
@@ -137,11 +119,7 @@ export default function App() {
     fetchStats()
   }
 
-  // Show Auth page if not logged in
-  if (!isLoggedIn) {
-    return <Auth onLoginSuccess={handleLoginSuccess} />
-  }
-
+  // Main app view (Authentication removed)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -152,13 +130,7 @@ export default function App() {
             <p className="text-gray-100 mt-2">Manage your finances with ease</p>
           </div>
           <div className="text-right">
-            <p className="text-lg font-semibold">Welcome, {user?.username}!</p>
-            <button
-              onClick={handleLogout}
-              className="mt-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-semibold transition"
-            >
-              🚪 Logout
-            </button>
+            <p className="text-lg font-semibold">Welcome to your Dashboard!</p>
           </div>
         </div>
       </header>
