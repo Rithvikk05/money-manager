@@ -75,48 +75,59 @@ userSchema.set('toJSON', {
 
 const User = mongoose.model('User', userSchema);
 
-if (useMongo) {
-  mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB database'))
-    .catch((err) => console.error('MongoDB connection error:', err));
-} else {
-  // Database setup for SQLite
-  db = new sqlite3.Database(path.join(__dirname, 'money_manager.db'), (err) => {
-    if (err) console.error('Database connection error:', err);
-    else console.log('Connected to SQLite database');
-  });
+// Database initialization function
+const initDatabase = async () => {
+  if (useMongo) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+      });
+      console.log('Connected to MongoDB database');
+    } catch (err) {
+      console.error('MongoDB connection error:', err.message);
+      console.error('Make sure MONGODB_URI is correct and MongoDB Atlas allows this IP (set 0.0.0.0/0 in Network Access)');
+      process.exit(1);
+    }
+  } else {
+    // Database setup for SQLite
+    db = new sqlite3.Database(path.join(__dirname, 'money_manager.db'), (err) => {
+      if (err) console.error('Database connection error:', err);
+      else console.log('Connected to SQLite database');
+    });
 
-  // Initialize tables
-  db.serialize(() => {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-        email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-        password TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    // Initialize tables
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+          email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-    db.run(`
-      CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        date TEXT NOT NULL,
-        account TEXT NOT NULL,
-        category TEXT NOT NULL,
-        subcategory TEXT,
-        note TEXT,
-        amount REAL NOT NULL,
-        inr REAL,
-        currency TEXT DEFAULT 'INR',
-        type TEXT NOT NULL,
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-  });
-}
+      db.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          account TEXT NOT NULL,
+          category TEXT NOT NULL,
+          subcategory TEXT,
+          note TEXT,
+          amount REAL NOT NULL,
+          inr REAL,
+          currency TEXT DEFAULT 'INR',
+          type TEXT NOT NULL,
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    });
+  }
+};
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -181,25 +192,22 @@ const seedDemoUser = async () => {
   try {
     const hashedDemoPassword = await hashPassword('demo123');
     if (useMongo) {
-      // Wait briefly for connection to establish if needed
-      setTimeout(async () => {
-        try {
-          const existingDemo = await User.findOne({ username: 'demo' });
-          if (!existingDemo) {
-            const demoUser = new User({
-              username: 'demo',
-              email: 'demo@example.com',
-              password: hashedDemoPassword
-            });
-            await demoUser.save();
-            console.log('Seeded demo user in MongoDB');
-          } else {
-            console.log('Demo user already exists in MongoDB');
-          }
-        } catch (err) {
-          console.error('Error seeding demo user in MongoDB:', err.message);
+      try {
+        const existingDemo = await User.findOne({ username: 'demo' });
+        if (!existingDemo) {
+          const demoUser = new User({
+            username: 'demo',
+            email: 'demo@example.com',
+            password: hashedDemoPassword
+          });
+          await demoUser.save();
+          console.log('Seeded demo user in MongoDB');
+        } else {
+          console.log('Demo user already exists in MongoDB');
         }
-      }, 2000);
+      } catch (err) {
+        console.error('Error seeding demo user in MongoDB:', err.message);
+      }
     } else {
       // For SQLite, wait a bit to ensure table creation completes
       setTimeout(async () => {
@@ -214,7 +222,7 @@ const seedDemoUser = async () => {
         } catch (err) {
           console.error('Error seeding demo user in SQLite:', err.message);
         }
-      }, 2000);
+      }, 1000);
     }
   } catch (err) {
     console.error('Error seeding demo user:', err.message);
@@ -777,6 +785,13 @@ app.use((req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port} with ${useMongo ? 'MongoDB' : 'SQLite'}`);
+// Start server after database is ready
+initDatabase().then(() => {
+  seedDemoUser();
+  app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port} with ${useMongo ? 'MongoDB' : 'SQLite'}`);
+  });
+}).catch((err) => {
+  console.error('Failed to initialize:', err);
+  process.exit(1);
 });
