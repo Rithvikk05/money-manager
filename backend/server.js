@@ -23,9 +23,11 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const useMongo = !!process.env.MONGODB_URI;
+let db; // SQLite database reference
 
 // Define Mongoose Schema & Model
 const transactionSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   date: { type: String, required: true },
   account: { type: String, required: true },
   category: { type: String, required: true },
@@ -99,6 +101,7 @@ if (useMongo) {
     db.run(`
       CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         date TEXT NOT NULL,
         account TEXT NOT NULL,
         category TEXT NOT NULL,
@@ -144,9 +147,9 @@ const comparePassword = async (password, hash) => {
 };
 
 // Promise wrapper for SQLite db.get
-const dbGet = (db, sql, params) => {
+const dbGet = (database, sql, params) => {
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
+    database.get(sql, params, (err, row) => {
       if (err) reject(err);
       else resolve(row);
     });
@@ -154,11 +157,21 @@ const dbGet = (db, sql, params) => {
 };
 
 // Promise wrapper for SQLite db.run
-const dbRun = (db, sql, params) => {
+const dbRun = (database, sql, params) => {
   return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
+    database.run(sql, params, function(err) {
       if (err) reject(err);
       else resolve(this.lastID);
+    });
+  });
+};
+
+// Promise wrapper for SQLite db.all
+const dbAll = (database, sql, params) => {
+  return new Promise((resolve, reject) => {
+    database.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
     });
   });
 };
@@ -180,6 +193,8 @@ const seedDemoUser = async () => {
             });
             await demoUser.save();
             console.log('Seeded demo user in MongoDB');
+          } else {
+            console.log('Demo user already exists in MongoDB');
           }
         } catch (err) {
           console.error('Error seeding demo user in MongoDB:', err.message);
@@ -193,6 +208,8 @@ const seedDemoUser = async () => {
           if (!existingDemo) {
             await dbRun(db, 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)', ['demo', 'demo@example.com', hashedDemoPassword]);
             console.log('Seeded demo user in SQLite');
+          } else {
+            console.log('Demo user already exists in SQLite');
           }
         } catch (err) {
           console.error('Error seeding demo user in SQLite:', err.message);
@@ -280,48 +297,43 @@ app.post('/api/auth/register', async (req, res) => {
       });
     } else {
       // SQLite version
-      try {
-        const existingUser = await dbGet(
-          db,
-          'SELECT * FROM users WHERE username = ? OR email = ?',
-          [username.toLowerCase(), email.toLowerCase()]
-        );
+      const existingUser = await dbGet(
+        db,
+        'SELECT * FROM users WHERE username = ? OR email = ?',
+        [username.toLowerCase(), email.toLowerCase()]
+      );
 
-        if (existingUser) {
-          return res.status(400).json({ error: 'Username or email already exists' });
-        }
-
-        const hashedPassword = await hashPassword(password);
-
-        await dbRun(
-          db,
-          'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-          [username.toLowerCase(), email.toLowerCase(), hashedPassword]
-        );
-
-        const newUser = await dbGet(
-          db,
-          'SELECT id, username, email FROM users WHERE username = ?',
-          [username.toLowerCase()]
-        );
-
-        const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, {
-          expiresIn: '7d'
-        });
-
-        res.json({
-          message: 'User registered successfully',
-          token,
-          user: {
-            id: newUser.id,
-            username: newUser.username,
-            email: newUser.email
-          }
-        });
-      } catch (error) {
-        console.error('Registration error (SQLite):', error);
-        res.status(500).json({ error: error.message });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Username or email already exists' });
       }
+
+      const hashedPassword = await hashPassword(password);
+
+      const lastId = await dbRun(
+        db,
+        'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+        [username.toLowerCase(), email.toLowerCase(), hashedPassword]
+      );
+
+      const newUser = await dbGet(
+        db,
+        'SELECT id, username, email FROM users WHERE id = ?',
+        [lastId]
+      );
+
+      const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, {
+        expiresIn: '7d'
+      });
+
+      res.json({
+        message: 'User registered successfully',
+        token,
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email
+        }
+      });
     }
   } catch (error) {
     console.error('Registration error:', error);
@@ -366,40 +378,35 @@ app.post('/api/auth/login', async (req, res) => {
       });
     } else {
       // SQLite version
-      try {
-        const user = await dbGet(
-          db,
-          'SELECT * FROM users WHERE username = ?',
-          [username.toLowerCase()]
-        );
+      const user = await dbGet(
+        db,
+        'SELECT * FROM users WHERE username = ?',
+        [username.toLowerCase()]
+      );
 
-        if (!user) {
-          return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        const isPasswordValid = await comparePassword(password, user.password);
-
-        if (!isPasswordValid) {
-          return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
-          expiresIn: '7d'
-        });
-
-        res.json({
-          message: 'Login successful',
-          token,
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email
-          }
-        });
-      } catch (error) {
-        console.error('Login error (SQLite):', error);
-        res.status(500).json({ error: error.message });
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username or password' });
       }
+
+      const isPasswordValid = await comparePassword(password, user.password);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+
+      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
+        expiresIn: '7d'
+      });
+
+      res.json({
+        message: 'Login successful',
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      });
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -407,34 +414,30 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Get all transactions
-app.get('/api/transactions', async (req, res) => {
-  if (useMongo) {
-    try {
-      const transactions = await Transaction.find().sort({ date: -1 });
+// Get all transactions (protected - per user)
+app.get('/api/transactions', verifyToken, async (req, res) => {
+  try {
+    if (useMongo) {
+      const transactions = await Transaction.find({ userId: req.userId }).sort({ date: -1 });
       res.json(transactions);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } else {
+      const rows = await dbAll(db, 'SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC', [req.userId]);
+      res.json(rows);
     }
-  } else {
-    db.all('SELECT * FROM transactions ORDER BY date DESC', [], (err, rows) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json(rows || []);
-      }
-    });
+  } catch (err) {
+    console.error('Error fetching transactions:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Add transaction
-app.post('/api/transactions', async (req, res) => {
-  const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
-  console.log('POST /api/transactions body:', { date, account, category, subcategory, note, amount, currency, type, description });
-  
-  if (useMongo) {
-    try {
+// Add transaction (protected - per user)
+app.post('/api/transactions', verifyToken, async (req, res) => {
+  try {
+    const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    
+    if (useMongo) {
       const newTx = new Transaction({
+        userId: req.userId,
         date,
         account,
         category,
@@ -448,89 +451,72 @@ app.post('/api/transactions', async (req, res) => {
       });
       await newTx.save();
       res.json({ id: newTx._id, message: 'Transaction added successfully' });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } else {
+      const lastId = await dbRun(
+        db,
+        `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.userId, date, account, category, subcategory, note, amount, amount, currency, type, description]
+      );
+      res.json({ id: lastId, message: 'Transaction added successfully' });
     }
-  } else {
-    db.run(
-      `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [date, account, category, subcategory, note, amount, amount, currency, type, description],
-      function (err) {
-        if (err) {
-          res.status(500).json({ error: err.message });
-        } else {
-          res.json({ id: this.lastID, message: 'Transaction added successfully' });
-        }
-      }
-    );
+  } catch (err) {
+    console.error('Error adding transaction:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Update transaction
-app.put('/api/transactions/:id', async (req, res) => {
-  const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
-  
-  if (useMongo) {
-    try {
-      await Transaction.findByIdAndUpdate(req.params.id, {
-        date,
-        account,
-        category,
-        subcategory: subcategory || '',
-        note: note || '',
-        amount,
-        inr: amount,
-        currency: currency || 'INR',
-        type,
-        description: description || ''
-      });
+// Update transaction (protected - per user)
+app.put('/api/transactions/:id', verifyToken, async (req, res) => {
+  try {
+    const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    
+    if (useMongo) {
+      const tx = await Transaction.findOneAndUpdate(
+        { _id: req.params.id, userId: req.userId },
+        { date, account, category, subcategory: subcategory || '', note: note || '', amount, inr: amount, currency: currency || 'INR', type, description: description || '' }
+      );
+      if (!tx) return res.status(404).json({ error: 'Transaction not found' });
       res.json({ message: 'Transaction updated successfully' });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } else {
+      await dbRun(
+        db,
+        `UPDATE transactions 
+         SET date=?, account=?, category=?, subcategory=?, note=?, amount=?, inr=?, currency=?, type=?, description=?
+         WHERE id=? AND user_id=?`,
+        [date, account, category, subcategory, note, amount, amount, currency, type, description, req.params.id, req.userId]
+      );
+      res.json({ message: 'Transaction updated successfully' });
     }
-  } else {
-    db.run(
-      `UPDATE transactions 
-       SET date=?, account=?, category=?, subcategory=?, note=?, amount=?, inr=?, currency=?, type=?, description=?
-       WHERE id=?`,
-      [date, account, category, subcategory, note, amount, amount, currency, type, description, req.params.id],
-      (err) => {
-        if (err) {
-          res.status(500).json({ error: err.message });
-        } else {
-          res.json({ message: 'Transaction updated successfully' });
-        }
-      }
-    );
+  } catch (err) {
+    console.error('Error updating transaction:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Delete transaction
-app.delete('/api/transactions/:id', async (req, res) => {
-  if (useMongo) {
-    try {
-      await Transaction.findByIdAndDelete(req.params.id);
+// Delete transaction (protected - per user)
+app.delete('/api/transactions/:id', verifyToken, async (req, res) => {
+  try {
+    if (useMongo) {
+      const tx = await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+      if (!tx) return res.status(404).json({ error: 'Transaction not found' });
       res.json({ message: 'Transaction deleted successfully' });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } else {
+      await dbRun(db, 'DELETE FROM transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
+      res.json({ message: 'Transaction deleted successfully' });
     }
-  } else {
-    db.run('DELETE FROM transactions WHERE id=?', [req.params.id], (err) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        res.json({ message: 'Transaction deleted successfully' });
-      }
-    });
+  } catch (err) {
+    console.error('Error deleting transaction:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Get statistics
-app.get('/api/statistics', async (req, res) => {
-  if (useMongo) {
-    try {
+// Get statistics (protected - per user)
+app.get('/api/statistics', verifyToken, async (req, res) => {
+  try {
+    if (useMongo) {
       const stats = await Transaction.aggregate([
+        { $match: { userId: new mongoose.Types.ObjectId(req.userId) } },
         {
           $group: {
             _id: { type: '$type', category: '$category' },
@@ -547,84 +533,67 @@ app.get('/api/statistics', async (req, res) => {
             count: 1
           }
         },
-        {
-          $sort: { type: -1, total: -1 }
-        }
+        { $sort: { type: -1, total: -1 } }
       ]);
       res.json(stats);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } else {
+      const rows = await dbAll(
+        db,
+        `SELECT type, category, SUM(amount) as total, COUNT(*) as count
+         FROM transactions WHERE user_id = ?
+         GROUP BY type, category ORDER BY type DESC, total DESC`,
+        [req.userId]
+      );
+      res.json(rows);
     }
-  } else {
-    db.all(
-      `SELECT 
-        type,
-        category,
-        SUM(amount) as total,
-        COUNT(*) as count
-       FROM transactions
-       GROUP BY type, category
-       ORDER BY type DESC, total DESC`,
-      [],
-      (err, rows) => {
-        if (err) {
-          res.status(500).json({ error: err.message });
-        } else {
-          res.json(rows || []);
-        }
-      }
-    );
+  } catch (err) {
+    console.error('Error fetching statistics:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Export to Excel
-app.get('/api/export/excel', async (req, res) => {
-  const processExport = (rows) => {
-    // Map objects to regular JS objects if they are Mongoose documents
-    const cleanRows = rows.map((r) => {
-      const item = r.toJSON ? r.toJSON() : r;
-      return {
-        id: item.id,
-        date: item.date,
-        account: item.account,
-        category: item.category,
-        subcategory: item.subcategory,
-        note: item.note,
-        amount: item.amount,
-        inr: item.inr,
-        currency: item.currency,
-        type: item.type,
-        description: item.description,
-        created_at: item.created_at
-      };
-    });
+// Export to Excel (protected - per user)
+app.get('/api/export/excel', verifyToken, async (req, res) => {
+  try {
+    const processExport = (rows) => {
+      const cleanRows = rows.map((r) => {
+        const item = r.toJSON ? r.toJSON() : r;
+        return {
+          date: item.date,
+          account: item.account,
+          category: item.category,
+          subcategory: item.subcategory,
+          note: item.note,
+          amount: item.amount,
+          inr: item.inr,
+          currency: item.currency,
+          type: item.type,
+          description: item.description,
+          created_at: item.created_at
+        };
+      });
 
-    const ws = XLSX.utils.json_to_sheet(cleanRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+      const ws = XLSX.utils.json_to_sheet(cleanRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
 
-    const fileName = `transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      const fileName = `transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
-    res.send(XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }));
-  };
+      res.send(XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }));
+    };
 
-  if (useMongo) {
-    try {
-      const rows = await Transaction.find().sort({ date: -1 });
+    if (useMongo) {
+      const rows = await Transaction.find({ userId: req.userId }).sort({ date: -1 });
       processExport(rows);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } else {
+      const rows = await dbAll(db, 'SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC', [req.userId]);
+      processExport(rows);
     }
-  } else {
-    db.all('SELECT * FROM transactions ORDER BY date DESC', [], (err, rows) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else {
-        processExport(rows || []);
-      }
-    });
+  } catch (err) {
+    console.error('Error exporting:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -694,17 +663,17 @@ const processRowData = (row) => {
   };
 };
 
-// Import from Excel
+// Import from Excel (protected - per user)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-app.post('/api/import/excel', upload.single('file'), async (req, res) => {
+app.post('/api/import/excel', verifyToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({ imported: 0, message: 'No file uploaded' });
     }
 
-    console.log('Starting Excel import...');
+    console.log('Starting Excel import for user:', req.userId);
     console.log('File size:', req.file.size);
 
     let workbook;
@@ -738,7 +707,10 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
 
     if (useMongo) {
       try {
-        const docsToInsert = data.map(row => processRowData(row));
+        const docsToInsert = data.map(row => ({
+          ...processRowData(row),
+          userId: new mongoose.Types.ObjectId(req.userId)
+        }));
         await Transaction.insertMany(docsToInsert);
         console.log('Successfully imported', docsToInsert.length, 'transactions to MongoDB');
         return res.json({ imported: docsToInsert.length, message: `${docsToInsert.length} transactions imported successfully` });
@@ -755,9 +727,10 @@ app.post('/api/import/excel', upload.single('file'), async (req, res) => {
             const processedRow = processRowData(row);
             await dbRun(
               db,
-              `INSERT INTO transactions (date, account, category, subcategory, note, amount, inr, currency, type, description)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
+                req.userId,
                 processedRow.date,
                 processedRow.account,
                 processedRow.category,
@@ -800,7 +773,7 @@ app.use((req, res) => {
   res.status(404).json({ 
     error: 'Route not found',
     requested: `${req.method} ${req.path}`,
-    message: 'Please use one of the valid API endpoints. Visit http://localhost:5000 for more info'
+    message: 'Please use one of the valid API endpoints. Visit / for more info'
   });
 });
 

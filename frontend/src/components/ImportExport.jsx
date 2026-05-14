@@ -27,7 +27,8 @@ export default function ImportExport({ onImportSuccess }) {
       onImportSuccess()
       e.target.value = '' // Reset input
     } catch (error) {
-      alert('❌ Error importing file: ' + error.message)
+      const errMsg = error.response?.data?.error || error.message
+      alert('❌ Error importing file: ' + errMsg)
     }
   }
 

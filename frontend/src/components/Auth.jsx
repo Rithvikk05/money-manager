@@ -15,6 +15,7 @@ const API_BASE = getApiBase()
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -25,11 +26,13 @@ export default function Auth({ onLoginSuccess }) {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    setError('') // Clear error on input change
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register'
@@ -43,10 +46,11 @@ export default function Auth({ onLoginSuccess }) {
       localStorage.setItem('token', response.data.token)
       localStorage.setItem('user', JSON.stringify(response.data.user))
 
+      // Directly enter dashboard — no popup
       setFormData({ username: '', email: '', password: '', confirmPassword: '' })
       onLoginSuccess()
     } catch (error) {
-      alert('❌ ' + (error.response?.data?.error || error.message))
+      setError(error.response?.data?.error || error.message)
     } finally {
       setLoading(false)
     }
@@ -59,7 +63,7 @@ export default function Auth({ onLoginSuccess }) {
 
         <div className="flex gap-4 mb-6">
           <button
-            onClick={() => setIsLogin(true)}
+            onClick={() => { setIsLogin(true); setError(''); }}
             className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
               isLogin
                 ? 'bg-blue-600 text-white'
@@ -69,7 +73,7 @@ export default function Auth({ onLoginSuccess }) {
             Login
           </button>
           <button
-            onClick={() => setIsLogin(false)}
+            onClick={() => { setIsLogin(false); setError(''); }}
             className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
               !isLogin
                 ? 'bg-blue-600 text-white'
@@ -79,6 +83,12 @@ export default function Auth({ onLoginSuccess }) {
             Register
           </button>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            ❌ {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -150,7 +160,7 @@ export default function Auth({ onLoginSuccess }) {
           <p>
             {isLogin ? "Don't have an account? " : 'Already have an account? '}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => { setIsLogin(!isLogin); setError(''); }}
               className="text-blue-600 hover:underline font-semibold"
             >
               {isLogin ? 'Register' : 'Login'}
