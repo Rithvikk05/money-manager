@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import axios from 'axios'
 
-const API_BASE = import.meta.env.VITE_API_BASE 
-  ? (import.meta.env.VITE_API_BASE.startsWith('http') ? import.meta.env.VITE_API_BASE : `https://${import.meta.env.VITE_API_BASE}`)
-  : 'http://localhost:5000/api'
+const API_BASE = import.meta.env.DEV 
+  ? 'http://localhost:5000/api' 
+  : (import.meta.env.VITE_API_BASE 
+      ? (import.meta.env.VITE_API_BASE.startsWith('http') ? import.meta.env.VITE_API_BASE : `https://${import.meta.env.VITE_API_BASE}`)
+      : 'http://localhost:5000/api')
 
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true)
@@ -36,7 +38,6 @@ export default function Auth({ onLoginSuccess }) {
       localStorage.setItem('token', response.data.token)
       localStorage.setItem('user', JSON.stringify(response.data.user))
 
-      alert(`✅ ${response.data.message}`)
       setFormData({ username: '', email: '', password: '', confirmPassword: '' })
       onLoginSuccess()
     } catch (error) {

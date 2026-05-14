@@ -8,9 +8,11 @@ import Statistics from './components/Statistics'
 import ImportExport from './components/ImportExport'
 import Auth from './components/Auth'
 
-const API_BASE = import.meta.env.VITE_API_BASE 
-  ? (import.meta.env.VITE_API_BASE.startsWith('http') ? import.meta.env.VITE_API_BASE : `https://${import.meta.env.VITE_API_BASE}`)
-  : 'http://localhost:5000/api'
+const API_BASE = import.meta.env.DEV 
+  ? 'http://localhost:5000/api' 
+  : (import.meta.env.VITE_API_BASE 
+      ? (import.meta.env.VITE_API_BASE.startsWith('http') ? import.meta.env.VITE_API_BASE : `https://${import.meta.env.VITE_API_BASE}`)
+      : 'http://localhost:5000/api')
 
 // Add JWT token to all requests
 axios.interceptors.request.use((config) => {

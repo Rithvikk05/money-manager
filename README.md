@@ -177,7 +177,7 @@ MIT License - feel free to use for personal or commercial projects
 
 ## 👨‍💻 Developer
 
-Created with ❤️ by [Your Name]
+Created with ❤️ by Rithvikk05 & AI Assistance
 
 ## 🤝 Contributing
 

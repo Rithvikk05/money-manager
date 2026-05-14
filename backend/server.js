@@ -163,6 +163,49 @@ const dbRun = (db, sql, params) => {
   });
 };
 
+// Seed Demo User credentials if not exists
+const seedDemoUser = async () => {
+  try {
+    const hashedDemoPassword = await hashPassword('demo123');
+    if (useMongo) {
+      // Wait briefly for connection to establish if needed
+      setTimeout(async () => {
+        try {
+          const existingDemo = await User.findOne({ username: 'demo' });
+          if (!existingDemo) {
+            const demoUser = new User({
+              username: 'demo',
+              email: 'demo@example.com',
+              password: hashedDemoPassword
+            });
+            await demoUser.save();
+            console.log('Seeded demo user in MongoDB');
+          }
+        } catch (err) {
+          console.error('Error seeding demo user in MongoDB:', err.message);
+        }
+      }, 2000);
+    } else {
+      // For SQLite, wait a bit to ensure table creation completes
+      setTimeout(async () => {
+        try {
+          const existingDemo = await dbGet(db, 'SELECT * FROM users WHERE username = ?', ['demo']);
+          if (!existingDemo) {
+            await dbRun(db, 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)', ['demo', 'demo@example.com', hashedDemoPassword]);
+            console.log('Seeded demo user in SQLite');
+          }
+        } catch (err) {
+          console.error('Error seeding demo user in SQLite:', err.message);
+        }
+      }, 2000);
+    }
+  } catch (err) {
+    console.error('Error seeding demo user:', err.message);
+  }
+};
+
+seedDemoUser();
+
 // Routes
 
 // Root endpoint
