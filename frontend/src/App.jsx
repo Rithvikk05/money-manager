@@ -6,6 +6,7 @@ import TransactionTable from './components/TransactionTable'
 import CalendarView from './components/CalendarView'
 import Statistics from './components/Statistics'
 import ImportExport from './components/ImportExport'
+import DeletedTransactions from './components/DeletedTransactions'
 import Auth from './components/Auth'
 
 const getApiBase = () => {
@@ -32,6 +33,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState(null)
   const [transactions, setTransactions] = useState([])
+  const [deletedTransactions, setDeletedTransactions] = useState([])
   const [stats, setStats] = useState([])
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -47,6 +49,7 @@ export default function App() {
       setIsLoggedIn(true)
       setUser(JSON.parse(userData))
       fetchTransactions()
+      fetchDeletedTransactions()
       fetchStats()
     }
   }, [])
@@ -91,6 +94,15 @@ export default function App() {
     }
   }
 
+  const fetchDeletedTransactions = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/deleted-transactions`)
+      setDeletedTransactions(response.data)
+    } catch (error) {
+      console.error('Error fetching deleted transactions:', error)
+    }
+  }
+
   const handleAddTransaction = async (data) => {
     try {
       if (editingId) {
@@ -112,10 +124,35 @@ export default function App() {
       try {
         await axios.delete(`${API_BASE}/transactions/${id}`)
         fetchTransactions()
+        fetchDeletedTransactions()
         fetchStats()
       } catch (error) {
         console.error('Error deleting transaction:', error)
       }
+    }
+  }
+
+  const handleRestoreTransaction = async (id) => {
+    try {
+      await axios.post(`${API_BASE}/deleted-transactions/${id}/restore`)
+      fetchTransactions()
+      fetchDeletedTransactions()
+      fetchStats()
+      alert('Transaction restored successfully!')
+    } catch (error) {
+      console.error('Error restoring transaction:', error)
+      alert('Failed to restore transaction')
+    }
+  }
+
+  const handlePermanentlyDelete = async (id) => {
+    try {
+      await axios.delete(`${API_BASE}/deleted-transactions/${id}`)
+      fetchDeletedTransactions()
+      alert('Transaction permanently deleted!')
+    } catch (error) {
+      console.error('Error permanently deleting transaction:', error)
+      alert('Failed to permanently delete transaction')
     }
   }
 
@@ -134,6 +171,7 @@ export default function App() {
 
   const handleImportSuccess = () => {
     fetchTransactions()
+    fetchDeletedTransactions()
     fetchStats()
   }
 
@@ -216,6 +254,16 @@ export default function App() {
           >
             🗓️ Calendar
           </button>
+          <button
+            onClick={() => setActiveTab('deleted')}
+            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'deleted'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-blue-600'
+            }`}
+          >
+            🗑️ Deleted Transactions
+          </button>
         </div>
       </nav>
 
@@ -232,6 +280,7 @@ export default function App() {
             onSubmit={handleAddTransaction}
             editData={editData}
             initialData={initialData}
+            onDelete={handleDelete}
             onCancel={() => {
               setEditingId(null)
               setEditData(null)
@@ -254,6 +303,14 @@ export default function App() {
 
         {!loading && activeTab === 'import-export' && (
           <ImportExport onImportSuccess={handleImportSuccess} />
+        )}
+
+        {!loading && activeTab === 'deleted' && (
+          <DeletedTransactions
+            deletedTransactions={deletedTransactions}
+            onRestore={handleRestoreTransaction}
+            onPermanentlyDelete={handlePermanentlyDelete}
+          />
         )}
       </main>
 

@@ -54,6 +54,36 @@ transactionSchema.set('toJSON', {
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
+// Define DeletedTransaction Schema & Model
+const deletedTransactionSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  transactionId: mongoose.Schema.Types.Mixed, // Can be ObjectId or number
+  date: { type: String, required: true },
+  account: { type: String, required: true },
+  category: { type: String, required: true },
+  subcategory: { type: String, default: '' },
+  note: { type: String, default: '' },
+  amount: { type: Number, required: true },
+  inr: { type: Number },
+  currency: { type: String, default: 'INR' },
+  type: { type: String, required: true },
+  description: { type: String, default: '' },
+  deleted_at: { type: Date, default: Date.now },
+  original_created_at: { type: Date }
+});
+
+deletedTransactionSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
+const DeletedTransaction = mongoose.model('DeletedTransaction', deletedTransactionSchema);
+
 // Define User Schema & Model
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -125,6 +155,29 @@ const initDatabase = async () => {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS deleted_transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          transaction_id INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          account TEXT NOT NULL,
+          category TEXT NOT NULL,
+          subcategory TEXT,
+          note TEXT,
+          amount REAL NOT NULL,
+          inr REAL,
+          currency TEXT DEFAULT 'INR',
+          type TEXT NOT NULL,
+          description TEXT,
+          deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          original_created_at DATETIME
+        )
+      `);
+
+      // Optimize database file
+      db.run('VACUUM');
     });
   }
 };
@@ -502,19 +555,141 @@ app.put('/api/transactions/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Delete transaction (protected - per user)
+// Delete transaction (protected - per user) - soft delete
 app.delete('/api/transactions/:id', verifyToken, async (req, res) => {
   try {
     if (useMongo) {
-      const tx = await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+      const tx = await Transaction.findOne({ _id: req.params.id, userId: req.userId });
       if (!tx) return res.status(404).json({ error: 'Transaction not found' });
+      
+      // Move to deleted transactions
+      const deletedTx = new DeletedTransaction({
+        userId: req.userId,
+        transactionId: tx._id,
+        date: tx.date,
+        account: tx.account,
+        category: tx.category,
+        subcategory: tx.subcategory,
+        note: tx.note,
+        amount: tx.amount,
+        inr: tx.inr,
+        currency: tx.currency,
+        type: tx.type,
+        description: tx.description,
+        original_created_at: tx.created_at
+      });
+      await deletedTx.save();
+      
+      // Delete from transactions
+      await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.userId });
       res.json({ message: 'Transaction deleted successfully' });
     } else {
+      // SQLite
+      const tx = await dbGet(db, 'SELECT * FROM transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
+      if (!tx) return res.status(404).json({ error: 'Transaction not found' });
+      
+      // Move to deleted_transactions
+      await dbRun(
+        db,
+        `INSERT INTO deleted_transactions (user_id, transaction_id, date, account, category, subcategory, note, amount, inr, currency, type, description, original_created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [tx.user_id, tx.id, tx.date, tx.account, tx.category, tx.subcategory, tx.note, tx.amount, tx.inr, tx.currency, tx.type, tx.description, tx.created_at]
+      );
+      
+      // Delete from transactions
       await dbRun(db, 'DELETE FROM transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
       res.json({ message: 'Transaction deleted successfully' });
     }
   } catch (err) {
     console.error('Error deleting transaction:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get deleted transactions (protected - per user)
+app.get('/api/deleted-transactions', verifyToken, async (req, res) => {
+  try {
+    if (useMongo) {
+      const deletedTxs = await DeletedTransaction.find({ userId: req.userId }).sort({ deleted_at: -1 });
+      res.json(deletedTxs);
+    } else {
+      const rows = await dbAll(db, 'SELECT * FROM deleted_transactions WHERE user_id = ? ORDER BY deleted_at DESC', [req.userId]);
+      res.json(rows);
+    }
+  } catch (err) {
+    console.error('Error fetching deleted transactions:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Restore deleted transaction (protected - per user)
+app.post('/api/deleted-transactions/:id/restore', verifyToken, async (req, res) => {
+  try {
+    if (useMongo) {
+      const deletedTx = await DeletedTransaction.findOne({ _id: req.params.id, userId: req.userId });
+      if (!deletedTx) return res.status(404).json({ error: 'Deleted transaction not found' });
+      
+      // Restore to transactions
+      const restoredTx = new Transaction({
+        userId: req.userId,
+        date: deletedTx.date,
+        account: deletedTx.account,
+        category: deletedTx.category,
+        subcategory: deletedTx.subcategory,
+        note: deletedTx.note,
+        amount: deletedTx.amount,
+        inr: deletedTx.inr,
+        currency: deletedTx.currency,
+        type: deletedTx.type,
+        description: deletedTx.description,
+        created_at: deletedTx.original_created_at
+      });
+      await restoredTx.save();
+      
+      // Delete from deleted_transactions
+      await DeletedTransaction.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+      res.json({ message: 'Transaction restored successfully' });
+    } else {
+      // SQLite
+      const deletedTx = await dbGet(db, 'SELECT * FROM deleted_transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
+      if (!deletedTx) return res.status(404).json({ error: 'Deleted transaction not found' });
+      
+      // Restore to transactions
+      const lastId = await dbRun(
+        db,
+        `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [deletedTx.user_id, deletedTx.date, deletedTx.account, deletedTx.category, deletedTx.subcategory, deletedTx.note, deletedTx.amount, deletedTx.inr, deletedTx.currency, deletedTx.type, deletedTx.description, deletedTx.original_created_at]
+      );
+      
+      // Delete from deleted_transactions
+      await dbRun(db, 'DELETE FROM deleted_transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
+      res.json({ message: 'Transaction restored successfully', id: lastId });
+    }
+  } catch (err) {
+    console.error('Error restoring transaction:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Permanently delete deleted transaction (protected - per user)
+app.delete('/api/deleted-transactions/:id', verifyToken, async (req, res) => {
+  try {
+    if (useMongo) {
+      const deletedTx = await DeletedTransaction.findOne({ _id: req.params.id, userId: req.userId });
+      if (!deletedTx) return res.status(404).json({ error: 'Deleted transaction not found' });
+      
+      await DeletedTransaction.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+      res.json({ message: 'Transaction permanently deleted' });
+    } else {
+      const deletedTx = await dbGet(db, 'SELECT * FROM deleted_transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
+      if (!deletedTx) return res.status(404).json({ error: 'Deleted transaction not found' });
+      
+      await dbRun(db, 'DELETE FROM deleted_transactions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
+      res.json({ message: 'Transaction permanently deleted' });
+    }
+  } catch (err) {
+    console.error('Error permanently deleting transaction:', err);
     res.status(500).json({ error: err.message });
   }
 });

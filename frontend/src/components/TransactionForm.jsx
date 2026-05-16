@@ -21,7 +21,7 @@ const CATEGORIES = [
 ]
 const TYPES = ['Income', 'Expense', 'Transfer-Out', 'Transfer-In']
 
-export default function TransactionForm({ onSubmit, editData, onCancel, initialData }) {
+export default function TransactionForm({ onSubmit, editData, onCancel, initialData, onDelete }) {
   const defaultData = {
     date: new Date().toISOString().split('T')[0],
     accountType: '',
@@ -266,9 +266,22 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               {editData ? '💾 Update Transaction' : '➕ Add Transaction'}
             </button>
             {editData && (
-              <button type="button" onClick={onCancel} className="btn-secondary flex-1">
-                ❌ Cancel
-              </button>
+              <>
+                <button type="button" onClick={onCancel} className="btn-secondary flex-1">
+                  ❌ Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (window.confirm('Delete this transaction?')) {
+                      onDelete(editData.id)
+                    }
+                  }} 
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                >
+                  🗑️ Delete
+                </button>
+              </>
             )}
           </div>
         </form>

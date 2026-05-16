@@ -10,41 +10,90 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f8f9fa;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
 }
 
 .gradient-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
 }
 
 .card {
-  @apply bg-white rounded-lg shadow-md p-6 transition-transform duration-300 hover:shadow-lg;
+  @apply bg-white rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-xl border border-gray-100;
+}
+
+.card:hover {
+  transform: translateY(-2px);
 }
 
 .btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors;
+  @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 .btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors;
+  @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 .btn-danger {
-  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors;
+  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
 }
 
 .input-field {
-  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition;
+  @apply w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white;
 }
 
 .stat-card {
-  @apply card bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-600;
+  @apply card bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-600 shadow-md;
 }
 
 .expense-card {
-  @apply card bg-gradient-to-br from-red-50 to-orange-50 border-l-4 border-red-600;
+  @apply card bg-gradient-to-br from-red-50 to-orange-50 border-l-4 border-red-600 shadow-md;
 }
 
 .income-card {
-  @apply card bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-600;
+  @apply card bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-600 shadow-md;
+}
+
+/* Enhanced table styling */
+table thead th {
+  background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease;
+}
+
+table tbody tr:hover {
+  background-color: #f8fafb;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
