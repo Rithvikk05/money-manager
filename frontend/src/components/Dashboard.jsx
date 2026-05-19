@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { getMonthlyBalanceSummaries, isCarryTransaction } from '../utils/monthlyBalances'
 
 const formatDate = (dateString) => {
   try {
@@ -36,21 +38,11 @@ const formatDate = (dateString) => {
 }
 
 export default function Dashboard({ transactions, stats }) {
-  const isCarryTransaction = (t) => {
-    const text = ((t.category || '') + ' ' + (t.note || '') + ' ' + (t.description || '')).toLowerCase()
-    return /\b(b\/d|c\/f|balance\s*b|balance\s*c|brought\s+down|carried\s+forward)\b/.test(text)
-  }
+  const monthlySummaries = useMemo(() => getMonthlyBalanceSummaries(transactions), [transactions])
 
-  const totalIncome = transactions
-    .filter((t) => t.type === 'Income' && !isCarryTransaction(t))
-    .reduce((sum, t) => sum + (t.amount || 0), 0)
-
-  const totalExpense = transactions
-    .filter((t) => t.type === 'Expense' && !isCarryTransaction(t))
-    .reduce((sum, t) => sum + (t.amount || 0), 0)
-
-  // Balance shown in dashboard excludes explicit carry-forward / brought-down balance entries
-  const balance = totalIncome - totalExpense
+  const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
+  const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
+  const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
 
   // Category breakdown
   const expenseByCategory = transactions
@@ -67,22 +59,11 @@ export default function Dashboard({ transactions, stats }) {
   }))
 
   // Monthly breakdown
-  const monthlyData = {}
-  transactions.forEach((t) => {
-    if (t.date) {
-      const month = t.date.substring(0, 7) // YYYY-MM
-      if (!monthlyData[month]) {
-        monthlyData[month] = { month, income: 0, expense: 0 }
-      }
-      if (t.type === 'Income') {
-        monthlyData[month].income += t.amount || 0
-      } else if (t.type === 'Expense') {
-        monthlyData[month].expense += t.amount || 0
-      }
-    }
-  })
-
-  const monthlyArray = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month))
+  const monthlyArray = monthlySummaries.map(({ month, income, expense }) => ({
+    month,
+    income,
+    expense,
+  }))
 
   const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140']
 

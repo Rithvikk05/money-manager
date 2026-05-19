@@ -1,52 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
-
-function parseDate(value) {
-  if (!value) return new Date(NaN)
-  const trimmed = String(value).trim()
-  const asNum = Number(trimmed)
-  if (!Number.isNaN(asNum) && /^\d+(\.\d+)?$/.test(trimmed)) {
-    return new Date((asNum - 25569) * 86400 * 1000)
-  }
-
-  const isoDate = new Date(trimmed)
-  if (!Number.isNaN(isoDate.getTime())) return isoDate
-
-  const parts = trimmed.split('/')
-  if (parts.length === 3) {
-    const day = Number(parts[0])
-    const month = Number(parts[1]) - 1
-    const year = Number(parts[2])
-    const dmy = new Date(year, month, day)
-    if (!Number.isNaN(dmy.getTime())) return dmy
-  }
-
-  return new Date(value)
-}
-
-function toYearMonth(value) {
-  const date = parseDate(value)
-  if (Number.isNaN(date.getTime())) return null
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}`
-}
-
-function monthLabel(ym) {
-  return new Date(`${ym}-01`).toLocaleDateString('en-IN', {
-    year: 'numeric',
-    month: 'long',
-  })
-}
-
-function isExplicitOpening(transaction) {
-  const text = `${transaction.category || ''} ${transaction.note || ''} ${transaction.description || ''}`.toLowerCase()
-  return /\b(brought\s+down|b\/d|balance\s+b|balance\s+brought)\b/.test(text)
-}
-
-function isExplicitClosing(transaction) {
-  const text = `${transaction.category || ''} ${transaction.note || ''} ${transaction.description || ''}`.toLowerCase()
-  return /\b(carried\s+forward|c\/f|balance\s+c|balance\s+carried)\b/.test(text)
-}
+import {
+  getMonthlyBalanceSummaries,
+  monthLabel,
+  parseTransactionDate,
+  toYearMonth,
+} from '../utils/monthlyBalances'
 
 export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -75,7 +33,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
     const years = new Set([new Date().getFullYear()])
     for (const transaction of transactionList) {
       if (!transaction || !transaction.date) continue
-      const date = parseDate(transaction.date)
+      const date = parseTransactionDate(transaction.date)
       if (!Number.isNaN(date.getTime())) {
         years.add(date.getFullYear())
       }
@@ -105,54 +63,18 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
   }, [monthsList, selectedMonth])
 
   const monthlyBalances = useMemo(() => {
-    const result = {}
-    let previousClosing = 0
-
-    const ascendingMonths = [...monthsList].sort()
-    for (const ym of ascendingMonths) {
-      const txs = Array.isArray(monthMap[ym]) ? monthMap[ym] : []
-      let income = 0
-      let expense = 0
-      let opening = null
-      let closing = null
-
-      for (const transaction of txs) {
-        const amount = Number(transaction.amount) || 0
-        if (isExplicitOpening(transaction)) {
-          opening = (opening || 0) + amount
-          continue
-        }
-        if (isExplicitClosing(transaction)) {
-          closing = (closing || 0) + amount
-          continue
-        }
-        if ((transaction.type || '').toLowerCase() === 'income') {
-          income += amount
-        } else if ((transaction.type || '').toLowerCase() === 'expense') {
-          expense += amount
-        }
-      }
-
-      const resolvedOpening = opening !== null ? opening : previousClosing
-      const resolvedClosing = closing !== null ? closing : resolvedOpening + income - expense
-      result[ym] = {
-        opening: resolvedOpening,
-        income,
-        expense,
-        closing: resolvedClosing,
-      }
-      previousClosing = resolvedClosing
-    }
-
-    return result
-  }, [monthMap, monthsList])
+    return getMonthlyBalanceSummaries(transactionList, monthsList).reduce((result, summary) => {
+      result[summary.month] = summary
+      return result
+    }, {})
+  }, [monthsList, transactionList])
 
   const daysMap = useMemo(() => {
     const grouped = {}
     const txs = selectedMonth && Array.isArray(monthMap[selectedMonth]) ? monthMap[selectedMonth] : []
 
     for (const transaction of txs) {
-      const date = parseDate(transaction.date)
+      const date = parseTransactionDate(transaction.date)
       if (Number.isNaN(date.getTime())) continue
       const day = date.getDate()
       if (!Array.isArray(grouped[day])) grouped[day] = []
