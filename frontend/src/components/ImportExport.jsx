@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getMonthlyBalanceSummaries, monthLabel, parseTransactionDate } from '../utils/monthlyBalances'
 
 const getApiBase = () => {
   if (import.meta.env.DEV) return 'http://localhost:5000/api'
@@ -10,6 +11,22 @@ const getApiBase = () => {
   return base
 }
 const API_BASE = getApiBase()
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const formatAmount = (value) => `₹${(Number(value) || 0).toLocaleString('en-IN')}`
+
+const formatDisplayDate = (value) => {
+  const date = parseTransactionDate(value)
+  if (Number.isNaN(date.getTime())) return escapeHtml(value)
+  return escapeHtml(date.toLocaleDateString('en-IN'))
+}
 
 export default function ImportExport({ onImportSuccess }) {
   const handleImportFile = async (e) => {
@@ -53,7 +70,11 @@ export default function ImportExport({ onImportSuccess }) {
   const handleExportHTML = async () => {
     try {
       const response = await axios.get(`${API_BASE}/transactions`)
-      const transactions = response.data
+      const transactions = Array.isArray(response.data) ? response.data : []
+      const monthlySummaries = getMonthlyBalanceSummaries(transactions)
+      const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
+      const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
+      const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
 
       let html = `
         <!DOCTYPE html>
@@ -70,6 +91,7 @@ export default function ImportExport({ onImportSuccess }) {
             .income-card { background: #d4edda; color: #155724; }
             .expense-card { background: #f8d7da; color: #721c24; }
             .balance-card { background: #d1ecf1; color: #0c5460; }
+            .summary-note { margin: 0 0 20px; color: #666; text-align: center; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th { background: #667eea; color: white; padding: 12px; text-align: left; }
             td { padding: 10px; border-bottom: 1px solid #ddd; }
@@ -85,29 +107,60 @@ export default function ImportExport({ onImportSuccess }) {
             <p style="text-align: center; color: #666;">Generated on ${new Date().toLocaleDateString('en-IN')}</p>
       `
 
-      const totalIncome = transactions
-        .filter((t) => t.type === 'Income')
-        .reduce((sum, t) => sum + (t.amount || 0), 0)
-      const totalExpense = transactions
-        .filter((t) => t.type === 'Expense')
-        .reduce((sum, t) => sum + (t.amount || 0), 0)
-      const balance = totalIncome - totalExpense
-
       html += `
             <div class="summary">
               <div class="summary-card income-card">
                 <h3>Total Income</h3>
-                <p style="font-size: 24px; margin: 10px 0;">₹${totalIncome.toLocaleString('en-IN')}</p>
+                <p style="font-size: 24px; margin: 10px 0;">${formatAmount(totalIncome)}</p>
               </div>
               <div class="summary-card expense-card">
                 <h3>Total Expense</h3>
-                <p style="font-size: 24px; margin: 10px 0;">₹${totalExpense.toLocaleString('en-IN')}</p>
+                <p style="font-size: 24px; margin: 10px 0;">${formatAmount(totalExpense)}</p>
               </div>
               <div class="summary-card balance-card">
-                <h3>Balance</h3>
-                <p style="font-size: 24px; margin: 10px 0;">₹${balance.toLocaleString('en-IN')}</p>
+                <h3>Current Balance</h3>
+                <p style="font-size: 24px; margin: 10px 0;">${formatAmount(balance)}</p>
               </div>
             </div>
+            <p class="summary-note">Monthly totals exclude explicit B/D and C/F entries. Closing balance is carried forward as the next month's opening balance.</p>
+
+            <h2>Monthly Summary</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Opening (B/D)</th>
+                  <th>Total Income</th>
+                  <th>Total Expense</th>
+                  <th>Closing (C/F)</th>
+                </tr>
+              </thead>
+              <tbody>
+      `
+
+      monthlySummaries.forEach((summary) => {
+        html += `
+          <tr>
+            <td>${escapeHtml(monthLabel(summary.month))}</td>
+            <td>${formatAmount(summary.opening)}</td>
+            <td class="income">${formatAmount(summary.income)}</td>
+            <td class="expense">${formatAmount(summary.expense)}</td>
+            <td>${formatAmount(summary.closing)}</td>
+          </tr>
+        `
+      })
+
+      if (monthlySummaries.length === 0) {
+        html += `
+          <tr>
+            <td colspan="5" style="text-align: center; color: #666;">No monthly summary available</td>
+          </tr>
+        `
+      }
+
+      html += `
+              </tbody>
+            </table>
 
             <h2>Transaction Details</h2>
             <table>
@@ -128,12 +181,12 @@ export default function ImportExport({ onImportSuccess }) {
         const typeClass = t.type === 'Income' ? 'income' : 'expense'
         html += `
           <tr>
-            <td>${new Date(t.date).toLocaleDateString('en-IN')}</td>
-            <td>${t.account}</td>
-            <td>${t.category}</td>
-            <td>${t.note}</td>
-            <td class="${typeClass}">₹${(t.amount || 0).toLocaleString('en-IN')}</td>
-            <td>${t.type}</td>
+            <td>${formatDisplayDate(t.date)}</td>
+            <td>${escapeHtml(t.account)}</td>
+            <td>${escapeHtml(t.category)}</td>
+            <td>${escapeHtml(t.note)}</td>
+            <td class="${typeClass}">${formatAmount(t.amount)}</td>
+            <td>${escapeHtml(t.type)}</td>
           </tr>
         `
       })
