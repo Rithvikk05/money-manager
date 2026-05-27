@@ -66,12 +66,13 @@ export default function Dashboard({ transactions, stats }) {
     [transactions]
   )
 
-  const bankBalance = bankMonthlySummaries.length > 0 ? bankMonthlySummaries[bankMonthlySummaries.length - 1].closing : 0
-  const cashBalance = cashMonthlySummaries.length > 0 ? cashMonthlySummaries[cashMonthlySummaries.length - 1].closing : 0
-
-  // Current month summaries for the cards
+  // Get current month only (no carry-forward from past months)
   const bankCurrentMonth = bankMonthlySummaries.length > 0 ? bankMonthlySummaries[bankMonthlySummaries.length - 1] : null
   const cashCurrentMonth = cashMonthlySummaries.length > 0 ? cashMonthlySummaries[cashMonthlySummaries.length - 1] : null
+
+  // Current actual balance = only this month's net activity (income - expense + transfers)
+  const bankBalance = bankCurrentMonth ? (bankCurrentMonth.income - bankCurrentMonth.expense + bankCurrentMonth.transferIn - bankCurrentMonth.transferOut) : 0
+  const cashBalance = cashCurrentMonth ? (cashCurrentMonth.income - cashCurrentMonth.expense + cashCurrentMonth.transferIn - cashCurrentMonth.transferOut) : 0
 
   // ---- Per-bank-account breakdown ----
   const bankAccounts = {}
@@ -141,16 +142,15 @@ export default function Dashboard({ transactions, stats }) {
               ₹{bankBalance.toLocaleString('en-IN')}
             </span>
           </div>
-          {/* Monthly carry-forward for Bank */}
+          {/* Current month activity only (no opening balance from past) */}
           {bankCurrentMonth && (
             <div className="mt-2 space-y-1 border-t border-indigo-100 pt-3 text-xs">
-              <p className="text-gray-500 font-semibold mb-1">{monthLabel(bankCurrentMonth.month)}</p>
-              <div className="flex justify-between"><span className="text-gray-500">Opening (B/D)</span><span className="font-semibold text-gray-700">₹{bankCurrentMonth.opening.toLocaleString('en-IN')}</span></div>
-              <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{bankCurrentMonth.income.toLocaleString('en-IN')}</span></div>
-              <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{bankCurrentMonth.expense.toLocaleString('en-IN')}</span></div>
+              <p className="text-gray-500 font-semibold mb-1">{monthLabel(bankCurrentMonth.month)} Activity</p>
+              {bankCurrentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{bankCurrentMonth.income.toLocaleString('en-IN')}</span></div>}
+              {bankCurrentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{bankCurrentMonth.expense.toLocaleString('en-IN')}</span></div>}
               {bankCurrentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{bankCurrentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
               {bankCurrentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{bankCurrentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
-              <div className="flex justify-between border-t border-indigo-200 pt-1 mt-1"><span className="text-gray-700 font-bold">Closing (C/F)</span><span className={`font-bold ${bankCurrentMonth.closing >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>₹{bankCurrentMonth.closing.toLocaleString('en-IN')}</span></div>
+              {(bankCurrentMonth.income > 0 || bankCurrentMonth.expense > 0) && <p className="text-gray-500 text-xs mt-1">↓ Current available balance shown above ↑</p>}
             </div>
           )}
           {/* Per-bank breakdown */}
@@ -179,16 +179,15 @@ export default function Dashboard({ transactions, stats }) {
               ₹{cashBalance.toLocaleString('en-IN')}
             </span>
           </div>
-          {/* Monthly carry-forward for Cash */}
+          {/* Current month activity only (no opening balance from past) */}
           {cashCurrentMonth && (
             <div className="mt-2 space-y-1 border-t border-emerald-100 pt-3 text-xs">
-              <p className="text-gray-500 font-semibold mb-1">{monthLabel(cashCurrentMonth.month)}</p>
-              <div className="flex justify-between"><span className="text-gray-500">Opening (B/D)</span><span className="font-semibold text-gray-700">₹{cashCurrentMonth.opening.toLocaleString('en-IN')}</span></div>
-              <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{cashCurrentMonth.income.toLocaleString('en-IN')}</span></div>
-              <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{cashCurrentMonth.expense.toLocaleString('en-IN')}</span></div>
+              <p className="text-gray-500 font-semibold mb-1">{monthLabel(cashCurrentMonth.month)} Activity</p>
+              {cashCurrentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{cashCurrentMonth.income.toLocaleString('en-IN')}</span></div>}
+              {cashCurrentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{cashCurrentMonth.expense.toLocaleString('en-IN')}</span></div>}
               {cashCurrentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{cashCurrentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
               {cashCurrentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{cashCurrentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
-              <div className="flex justify-between border-t border-emerald-200 pt-1 mt-1"><span className="text-gray-700 font-bold">Closing (C/F)</span><span className={`font-bold ${cashCurrentMonth.closing >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>₹{cashCurrentMonth.closing.toLocaleString('en-IN')}</span></div>
+              {(cashCurrentMonth.income > 0 || cashCurrentMonth.expense > 0) && <p className="text-gray-500 text-xs mt-1">↓ Current available balance shown above ↑</p>}
             </div>
           )}
         </div>
