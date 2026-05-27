@@ -74,17 +74,35 @@ export default function Dashboard({ transactions, stats }) {
   const bankBalance = bankCurrentMonth ? (bankCurrentMonth.income - bankCurrentMonth.expense + bankCurrentMonth.transferIn - bankCurrentMonth.transferOut) : 0
   const cashBalance = cashCurrentMonth ? (cashCurrentMonth.income - cashCurrentMonth.expense + cashCurrentMonth.transferIn - cashCurrentMonth.transferOut) : 0
 
-  // ---- Per-bank-account breakdown ----
+  // ---- Per-bank-account breakdown with current month balance ----
   const bankAccounts = {}
+  const bankAccountsCurrentMonth = {}
+  
   transactions.forEach((t) => {
-    if (isCarryTransaction(t) || !isBankAccount(t.account)) return
+    if (!isBankAccount(t.account)) return
+    
     const acc = t.account
     if (!bankAccounts[acc]) bankAccounts[acc] = 0
-    if (t.type === 'Income' || t.type === 'Transfer-In') {
-      bankAccounts[acc] += t.amount || 0
-    } else if (t.type === 'Expense' || t.type === 'Transfer-Out') {
-      bankAccounts[acc] -= t.amount || 0
+    if (!bankAccountsCurrentMonth[acc]) bankAccountsCurrentMonth[acc] = { income: 0, expense: 0, transferIn: 0, transferOut: 0 }
+    
+    // Skip carry transactions for account totals
+    if (isCarryTransaction(t)) return
+    
+    const amount = Number(t.amount) || 0
+    const type = (t.type || '').toLowerCase()
+    
+    // Overall account balance
+    if (type === 'income' || type === 'transfer-in') {
+      bankAccounts[acc] += amount
+    } else if (type === 'expense' || type === 'transfer-out') {
+      bankAccounts[acc] -= amount
     }
+    
+    // Current month activity
+    if (type === 'income') bankAccountsCurrentMonth[acc].income += amount
+    else if (type === 'expense') bankAccountsCurrentMonth[acc].expense += amount
+    else if (type === 'transfer-in') bankAccountsCurrentMonth[acc].transferIn += amount
+    else if (type === 'transfer-out') bankAccountsCurrentMonth[acc].transferOut += amount
   })
 
   // Category breakdown
@@ -130,44 +148,37 @@ export default function Dashboard({ transactions, stats }) {
         </div>
       </div>
 
-      {/* Balance by Account Type — with monthly carry-forward */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Bank Balance Card */}
-        <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-l-4 border-indigo-500">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-gray-700 text-sm font-semibold uppercase flex items-center gap-2">
-              🏦 Bank (Card) Balance
-            </p>
-            <span className={`text-2xl font-bold ${bankBalance >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
-              ₹{bankBalance.toLocaleString('en-IN')}
-            </span>
-          </div>
-          {/* Current month activity only (no opening balance from past) */}
-          {bankCurrentMonth && (
-            <div className="mt-2 space-y-1 border-t border-indigo-100 pt-3 text-xs">
-              <p className="text-gray-500 font-semibold mb-1">{monthLabel(bankCurrentMonth.month)} Activity</p>
-              {bankCurrentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{bankCurrentMonth.income.toLocaleString('en-IN')}</span></div>}
-              {bankCurrentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{bankCurrentMonth.expense.toLocaleString('en-IN')}</span></div>}
-              {bankCurrentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{bankCurrentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
-              {bankCurrentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{bankCurrentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
-              {(bankCurrentMonth.income > 0 || bankCurrentMonth.expense > 0) && <p className="text-gray-500 text-xs mt-1">↓ Current available balance shown above ↑</p>}
-            </div>
-          )}
-          {/* Per-bank breakdown */}
-          {Object.keys(bankAccounts).length > 0 && (
-            <div className="mt-3 space-y-2 border-t border-indigo-100 pt-3">
-              <p className="text-xs text-gray-500 font-semibold">Per Account</p>
-              {Object.entries(bankAccounts).map(([acc, bal]) => (
-                <div key={acc} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">{acc}</span>
-                  <span className={`font-semibold ${bal >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
-                    ₹{bal.toLocaleString('en-IN')}
-                  </span>
+      {/* Balance by Account Type — Individual Bank Accounts */}
+      <div className="space-y-6">
+        {/* Individual Bank Accounts */}
+        {Object.keys(bankAccounts).length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Object.entries(bankAccounts).map(([accName, totalBalance]) => {
+              const currentMonth = bankAccountsCurrentMonth[accName]
+              const currentBalance = currentMonth ? (currentMonth.income - currentMonth.expense + currentMonth.transferIn - currentMonth.transferOut) : 0
+              return (
+                <div key={accName} className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-l-4 border-indigo-500">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-gray-700 text-sm font-semibold uppercase">🏦 {accName}</p>
+                    <span className={`text-2xl font-bold ${currentBalance >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+                      ₹{currentBalance.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  {/* Current month activity */}
+                  {currentMonth && (
+                    <div className="mt-2 space-y-1 border-t border-indigo-100 pt-3 text-xs">
+                      <p className="text-gray-500 font-semibold mb-1">{monthLabel(bankCurrentMonth?.month)} Activity</p>
+                      {currentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{currentMonth.income.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{currentMonth.expense.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{currentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{currentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Cash Balance Card */}
         <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-l-4 border-emerald-500">

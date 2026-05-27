@@ -4,6 +4,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('All')
   const [filterCategory, setFilterCategory] = useState('All')
+  const [filterAccountType, setFilterAccountType] = useState('All')
   const [sortBy, setSortBy] = useState('date-desc')
 
   // Format date safely and extract month
@@ -114,8 +115,16 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
 
     const matchesType = filterType === 'All' || t.type === filterType
     const matchesCategory = filterCategory === 'All' || t.category === filterCategory
+    
+    // Filter by account type
+    let matchesAccountType = filterAccountType === 'All'
+    if (filterAccountType === 'Cash') {
+      matchesAccountType = t.account && t.account.toLowerCase().includes('cash')
+    } else if (filterAccountType === 'Bank') {
+      matchesAccountType = t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card'))
+    }
 
-    return matchesSearch && matchesType && matchesCategory
+    return matchesSearch && matchesType && matchesCategory && matchesAccountType
   })
 
   // Sort transactions
@@ -150,7 +159,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
       {/* Filters */}
       <div className="card">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">🔍 Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Search</label>
             <input
@@ -160,6 +169,14 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-field"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
+            <select value={filterAccountType} onChange={(e) => setFilterAccountType(e.target.value)} className="input-field">
+              <option>All</option>
+              <option>Cash</option>
+              <option>Bank</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
