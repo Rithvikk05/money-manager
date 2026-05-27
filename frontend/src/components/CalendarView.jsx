@@ -4,6 +4,7 @@ import {
   monthLabel,
   parseTransactionDate,
   toYearMonth,
+  injectVirtualCarryTransactions,
 } from '../utils/monthlyBalances'
 
 export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
@@ -13,7 +14,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
   })
   const [selectedDay, setSelectedDay] = useState(null)
 
-  const transactionList = Array.isArray(transactions) ? transactions : []
+  const transactionList = Array.isArray(transactions) ? injectVirtualCarryTransactions(transactions) : []
 
   const monthMap = useMemo(() => {
     const grouped = {}

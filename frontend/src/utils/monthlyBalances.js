@@ -54,7 +54,7 @@ export function getMonthlyBalanceSummaries(transactions = [], orderedMonths) {
   const monthMap = {}
 
   for (const transaction of Array.isArray(transactions) ? transactions : []) {
-    if (!transaction || !transaction.date) continue
+    if (!transaction || !transaction.date || transaction.isVirtual) continue
     const ym = toYearMonth(transaction.date)
     if (!ym) continue
     if (!Array.isArray(monthMap[ym])) monthMap[ym] = []
@@ -136,7 +136,7 @@ export function getAccountMonthlyBalanceSummaries(transactions = [], accountFilt
   const monthMap = {}
 
   for (const t of Array.isArray(transactions) ? transactions : []) {
-    if (!t || !t.date) continue
+    if (!t || !t.date || t.isVirtual) continue
     if (!accountFilter(t.account)) continue
     const ym = toYearMonth(t.date)
     if (!ym) continue
@@ -196,4 +196,64 @@ export function getAccountMonthlyBalanceSummaries(transactions = [], accountFilt
   }
 
   return summaries
+}
+
+/**
+ * Injects virtual "Balance B/D" and "Balance C/D" transactions into the list
+ * for display purposes without altering the database.
+ */
+export function injectVirtualCarryTransactions(transactions = []) {
+  if (!transactions || transactions.length === 0) return []
+  
+  const result = [...transactions]
+  const uniqueAccounts = [...new Set(transactions.map(t => t.account).filter(Boolean))]
+  
+  for (const account of uniqueAccounts) {
+    const accTxs = transactions.filter(t => t.account === account)
+    const summaries = getAccountMonthlyBalanceSummaries(accTxs, a => a === account)
+    
+    for (let i = 0; i < summaries.length; i++) {
+      const summary = summaries[i]
+      const ym = summary.month
+      const [yearStr, monthStr] = ym.split('-')
+      const year = parseInt(yearStr, 10)
+      const month = parseInt(monthStr, 10)
+      
+      // Inject B/D on the 1st of the month if there's an opening balance
+      // We skip if it's the very first month of activity and opening is 0
+      const hasExplicitOpening = accTxs.some(t => toYearMonth(t.date) === ym && isExplicitOpening(t))
+      if (!hasExplicitOpening && summary.opening !== 0) {
+        result.push({
+          id: `virtual-bd-${account}-${ym}`,
+          isVirtual: true,
+          date: `${yearStr}-${monthStr}-01`,
+          time: '00:00',
+          account: account,
+          category: 'Balance B/D',
+          note: 'Opening balance',
+          amount: Math.abs(summary.opening),
+          type: summary.opening >= 0 ? 'Balance-In' : 'Balance-Out', // Custom type
+        })
+      }
+      
+      // Inject C/D on the last day of the month
+      const hasExplicitClosing = accTxs.some(t => toYearMonth(t.date) === ym && isExplicitClosing(t))
+      if (!hasExplicitClosing && summary.closing !== 0) {
+        const lastDay = new Date(year, month, 0).getDate()
+        result.push({
+          id: `virtual-cd-${account}-${ym}`,
+          isVirtual: true,
+          date: `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`,
+          time: '23:59',
+          account: account,
+          category: 'Balance C/D',
+          note: 'Closing balance',
+          amount: Math.abs(summary.closing),
+          type: summary.closing >= 0 ? 'Balance-Out' : 'Balance-In', // Accounting style: positive closing balances the expense side
+        })
+      }
+    }
+  }
+  
+  return result
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel } from '../utils/monthlyBalances'
+import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel, injectVirtualCarryTransactions } from '../utils/monthlyBalances'
 
 const formatDate = (dateString) => {
   try {
@@ -127,6 +127,20 @@ export default function Dashboard({ transactions, stats }) {
     expense,
   }))
 
+  const displayTransactions = useMemo(() => {
+    const sorted = [...transactions].sort((a, b) => {
+      const ta = new Date(b.date).getTime() || 0
+      const tb = new Date(a.date).getTime() || 0
+      return ta - tb
+    })
+    const virtualInjected = injectVirtualCarryTransactions(sorted)
+    return virtualInjected.sort((a, b) => {
+      const ta = new Date(a.date).getTime() || 0
+      const tb = new Date(b.date).getTime() || 0
+      return tb - ta
+    })
+  }, [transactions])
+
   const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140']
 
   return (
@@ -247,8 +261,8 @@ export default function Dashboard({ transactions, stats }) {
               </tr>
             </thead>
             <tbody>
-              {transactions.slice(0, 10).map((t) => (
-                <tr key={t.id} className="border-b hover:bg-gray-50">
+              {displayTransactions.slice(0, 10).map((t) => (
+                <tr key={t.id} className={`border-b transition-colors ${t.isVirtual ? 'bg-gray-100 italic' : 'hover:bg-gray-50'}`}>
                   <td className="px-4 py-2 text-gray-700">{formatDate(t.date)}</td>
                   <td className="px-4 py-2 text-gray-600">{t.account}</td>
                   <td className="px-4 py-2">{t.category}</td>
@@ -260,13 +274,15 @@ export default function Dashboard({ transactions, stats }) {
                   </td>
                   <td className="px-4 py-2 text-center">
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      t.type === 'Income' ? 'bg-green-100 text-green-800' 
+                      t.type === 'Income' ? 'bg-green-100 text-green-800'
                         : t.type === 'Expense' ? 'bg-red-100 text-red-800'
                         : t.type === 'Transfer-In' ? 'bg-teal-100 text-teal-800'
                         : t.type === 'Transfer-Out' ? 'bg-orange-100 text-orange-800'
+                        : t.type === 'Balance-In' ? 'bg-purple-100 text-purple-800'
+                        : t.type === 'Balance-Out' ? 'bg-gray-200 text-gray-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}>
-                      {t.type}
+                      {t.isVirtual ? 'Auto-Balance' : t.type}
                     </span>
                   </td>
                 </tr>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { injectVirtualCarryTransactions } from '../utils/monthlyBalances'
 
 export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const [searchTerm, setSearchTerm] = useState('')
@@ -106,8 +107,11 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const categories = ['All', ...new Set(transactions.map((t) => t.category).filter(Boolean))]
   const uniqueAccounts = ['All', ...new Set(transactions.map((t) => t.account).filter(Boolean))]
 
+  // Inject virtual B/D and C/D transactions for display
+  const displayTransactions = injectVirtualCarryTransactions(transactions)
+
   // Filter transactions
-  let filtered = transactions.filter((t) => {
+  let filtered = displayTransactions.filter((t) => {
     const matchesSearch =
       !searchTerm ||
       t.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -182,6 +186,8 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
               <option>Expense</option>
               <option>Transfer-In</option>
               <option>Transfer-Out</option>
+              <option>Balance-In</option>
+              <option>Balance-Out</option>
             </select>
           </div>
           <div>
@@ -226,7 +232,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
               </thead>
               <tbody>
                 {filtered.map((transaction, index) => (
-                  <tr key={transaction.id} className={`border-b hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <tr key={transaction.id} className={`border-b transition-colors ${transaction.isVirtual ? 'bg-gray-100 italic' : (index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100')}`}>
                     <td className="px-4 py-3 text-gray-700 font-medium">
                       {formatDate(transaction.date)}
                       {transaction.time && <div className="text-xs text-gray-400">{transaction.time}</div>}
@@ -247,24 +253,32 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
                               ? 'bg-teal-100 text-teal-800'
                               : transaction.type === 'Transfer-Out'
                                 ? 'bg-orange-100 text-orange-800'
-                                : 'bg-blue-100 text-blue-800'
+                                : transaction.type === 'Balance-In'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : transaction.type === 'Balance-Out'
+                                    ? 'bg-gray-200 text-gray-800'
+                                    : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {transaction.type}
+                        {transaction.isVirtual ? 'Auto-Balance' : transaction.type}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center flex gap-2 justify-center">
-                      <button
-                        onClick={() => onEdit(transaction)}
-                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => onDelete(transaction.id)}
-                        className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors"
-                      >
-                        🗑️
-                      </button>
+                      {!transaction.isVirtual && (
+                        <>
+                          <button
+                            onClick={() => onEdit(transaction)}
+                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => onDelete(transaction.id)}
+                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors"
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
