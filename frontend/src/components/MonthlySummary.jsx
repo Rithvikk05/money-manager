@@ -76,6 +76,7 @@ export default function MonthlySummary({ transactions }) {
                 <th className="px-6 py-3 text-right font-bold text-gray-700">Opening (B/D)</th>
                 <th className="px-6 py-3 text-right font-bold text-gray-700">Monthly Income</th>
                 <th className="px-6 py-3 text-right font-bold text-gray-700">Monthly Expenses</th>
+                <th className="px-6 py-3 text-right font-bold text-gray-700">Net Transfers</th>
                 <th className="px-6 py-3 text-right font-bold text-gray-700">Closing (C/F)</th>
               </tr>
             </thead>
@@ -98,6 +99,11 @@ export default function MonthlySummary({ transactions }) {
                     <span className="font-semibold text-red-600">₹{(summary.expense || 0).toLocaleString('en-IN')}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
+                    <span className={`font-semibold ${((summary.transferIn || 0) - (summary.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}`}>
+                      {((summary.transferIn || 0) - (summary.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.transferIn || 0) - (summary.transferOut || 0)).toLocaleString('en-IN')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
                     <span className={`font-bold text-lg ${summary.closing >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                       ₹{(summary.closing || 0).toLocaleString('en-IN')}
                     </span>
@@ -115,6 +121,9 @@ export default function MonthlySummary({ transactions }) {
                 </td>
                 <td className="px-6 py-4 text-right text-red-700">
                   ₹{summaries.reduce((sum, s) => sum + (s.expense || 0), 0).toLocaleString('en-IN')}
+                </td>
+                <td className="px-6 py-4 text-right text-teal-700">
+                  ₹{summaries.reduce((sum, s) => sum + ((s.transferIn || 0) - (s.transferOut || 0)), 0).toLocaleString('en-IN')}
                 </td>
                 <td className="px-6 py-4 text-right text-blue-800">
                   ₹{(summaries[summaries.length - 1]?.closing || 0).toLocaleString('en-IN')}
