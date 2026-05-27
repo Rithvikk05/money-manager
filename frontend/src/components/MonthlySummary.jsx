@@ -1,176 +1,264 @@
-import { useState } from 'react'
-import { getAccountMonthlyBalanceSummaries, monthLabel } from '../utils/monthlyBalances'
+import { useEffect, useState, Fragment } from 'react'
+import { getUnifiedMonthlySummaries, monthLabel } from '../utils/monthlyBalances'
 import { exportToExcel } from '../utils/excelExport'
 
-export default function MonthlySummary({ transactions }) {
-  const [exportingAccount, setExportingAccount] = useState(null)
-  const [exportingAll, setExportingAll] = useState(false)
+export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
+  const [exporting, setExporting] = useState(false)
 
-  // Separate transactions by account type
-  const cashSummaries = getAccountMonthlyBalanceSummaries(
-    transactions,
-    (account) => account && account.toLowerCase().includes('cash')
-  )
-
-  const bankSummaries = getAccountMonthlyBalanceSummaries(
-    transactions,
-    (account) => account && !account.toLowerCase().includes('cash')
-  )
-
-  const handleExportCash = async () => {
-    setExportingAccount('cash')
-    try {
-      await exportToExcel(
-        'cash',
-        cashSummaries,
-        transactions.filter((t) => t.account && t.account.toLowerCase().includes('cash'))
-      )
-    } finally {
-      setExportingAccount(null)
+  useEffect(() => {
+    if (onRefresh) {
+      onRefresh()
     }
-  }
+  }, [])
 
-  const handleExportBank = async () => {
-    setExportingAccount('bank')
+  const unifiedSummaries = getUnifiedMonthlySummaries(transactions)
+
+  const handleExportSummary = async () => {
+    setExporting(true)
     try {
-      await exportToExcel(
-        'bank',
-        bankSummaries,
-        transactions.filter((t) => t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card')))
-      )
+      await exportToExcel('summary', unifiedSummaries, transactions)
     } finally {
-      setExportingAccount(null)
+      setExporting(false)
     }
   }
 
   const handleExportAll = async () => {
-    setExportingAll(true)
+    setExporting(true)
     try {
-      await exportToExcel('all', { cash: cashSummaries, bank: bankSummaries }, transactions)
+      await exportToExcel('all', unifiedSummaries, transactions)
     } finally {
-      setExportingAll(false)
+      setExporting(false)
     }
   }
 
-  const SummaryTable = ({ summaries, title, accountType, onExport, isExporting }) => (
-    <div className="card">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
-        <button
-          onClick={onExport}
-          disabled={isExporting}
-          className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold transition"
-        >
-          {isExporting ? '⏳ Exporting...' : '📊 Export to Excel'}
-        </button>
-      </div>
+  // Calculate totals
+  const cashTotals = {
+    opening: unifiedSummaries[0]?.cash.opening || 0,
+    income: unifiedSummaries.reduce((sum, s) => sum + (s.cash.income || 0), 0),
+    expense: unifiedSummaries.reduce((sum, s) => sum + (s.cash.expense || 0), 0),
+    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.cash.transferIn || 0) - (s.cash.transferOut || 0)), 0),
+    closing: unifiedSummaries[unifiedSummaries.length - 1]?.cash.closing || 0
+  }
 
-      {summaries.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No transactions for this account type</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gradient-to-r from-blue-100 to-blue-50 border-b-2 border-blue-300">
-              <tr>
-                <th className="px-6 py-3 text-left font-bold text-gray-700">Month</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Opening (B/D)</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Monthly Income</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Monthly Expenses</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Net Transfers</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Closing (C/F)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summaries.map((summary, index) => (
-                <tr
-                  key={summary.month}
-                  className={`border-b transition-colors ${
-                    index % 2 === 0 ? 'bg-gray-50 hover:bg-blue-50' : 'bg-white hover:bg-blue-50'
-                  }`}
-                >
-                  <td className="px-6 py-4 font-semibold text-gray-800">{monthLabel(summary.month)}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="font-semibold text-blue-600">₹{(summary.opening || 0).toLocaleString('en-IN')}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="font-semibold text-green-600">₹{(summary.income || 0).toLocaleString('en-IN')}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="font-semibold text-red-600">₹{(summary.expense || 0).toLocaleString('en-IN')}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`font-semibold ${((summary.transferIn || 0) - (summary.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}`}>
-                      {((summary.transferIn || 0) - (summary.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.transferIn || 0) - (summary.transferOut || 0)).toLocaleString('en-IN')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`font-bold text-lg ${summary.closing >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      ₹{(summary.closing || 0).toLocaleString('en-IN')}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {/* Summary Row */}
-              <tr className="bg-gradient-to-r from-blue-200 to-blue-100 font-bold border-t-2 border-blue-400">
-                <td className="px-6 py-4 text-gray-800">TOTAL</td>
-                <td className="px-6 py-4 text-right text-gray-800">
-                  ₹{(summaries[0]?.opening || 0).toLocaleString('en-IN')}
-                </td>
-                <td className="px-6 py-4 text-right text-green-700">
-                  ₹{summaries.reduce((sum, s) => sum + (s.income || 0), 0).toLocaleString('en-IN')}
-                </td>
-                <td className="px-6 py-4 text-right text-red-700">
-                  ₹{summaries.reduce((sum, s) => sum + (s.expense || 0), 0).toLocaleString('en-IN')}
-                </td>
-                <td className="px-6 py-4 text-right text-teal-700">
-                  ₹{summaries.reduce((sum, s) => sum + ((s.transferIn || 0) - (s.transferOut || 0)), 0).toLocaleString('en-IN')}
-                </td>
-                <td className="px-6 py-4 text-right text-blue-800">
-                  ₹{(summaries[summaries.length - 1]?.closing || 0).toLocaleString('en-IN')}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  )
+  const bankTotals = {
+    opening: unifiedSummaries[0]?.bank.opening || 0,
+    income: unifiedSummaries.reduce((sum, s) => sum + (s.bank.income || 0), 0),
+    expense: unifiedSummaries.reduce((sum, s) => sum + (s.bank.expense || 0), 0),
+    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.bank.transferIn || 0) - (s.bank.transferOut || 0)), 0),
+    closing: unifiedSummaries[unifiedSummaries.length - 1]?.bank.closing || 0
+  }
+
+  const overallTotals = {
+    opening: unifiedSummaries[0]?.total.opening || 0,
+    income: unifiedSummaries.reduce((sum, s) => sum + (s.total.income || 0), 0),
+    expense: unifiedSummaries.reduce((sum, s) => sum + (s.total.expense || 0), 0),
+    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.total.transferIn || 0) - (s.total.transferOut || 0)), 0),
+    closing: unifiedSummaries[unifiedSummaries.length - 1]?.total.closing || 0
+  }
 
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border-l-4 border-purple-500">
-        <div className="flex justify-between items-center">
+      {/* Header card */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border-l-4 border-purple-500 shadow-sm relative overflow-hidden">
+        {isLoading && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-pulse" />
+        )}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">📈 Monthly Summary</h2>
-            <p className="text-gray-600 mt-2">Track your monthly balance, income, and expenses by account type</p>
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-gray-800">📈 Monthly Summary</h2>
+              {isLoading && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
+                  Syncing...
+                </span>
+              )}
+            </div>
+            <p className="text-gray-600 mt-2">Track and compare your monthly balance, income, expenses and transfers by account type side-by-side</p>
           </div>
-          <button
-            onClick={handleExportAll}
-            disabled={exportingAll}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold transition text-lg"
-          >
-            {exportingAll ? '⏳ Exporting...' : '💾 Export All to Excel'}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={onRefresh}
+              disabled={isLoading || exporting}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 shadow-sm"
+            >
+              {isLoading ? '⏳ Syncing...' : '🔄 Refresh Data'}
+            </button>
+            <button
+              onClick={handleExportSummary}
+              disabled={isLoading || exporting || unifiedSummaries.length === 0}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 shadow-sm"
+            >
+              {exporting ? '⏳ Exporting...' : '📊 Export Summary'}
+            </button>
+            <button
+              onClick={handleExportAll}
+              disabled={isLoading || exporting || unifiedSummaries.length === 0}
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 shadow-sm"
+            >
+              {exporting ? '⏳ Exporting...' : '💾 Export All'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Cash Summary */}
-      <SummaryTable
-        summaries={cashSummaries}
-        title="💵 Cash Account Summary"
-        accountType="cash"
-        onExport={handleExportCash}
-        isExporting={exportingAccount === 'cash'}
-      />
+      {/* Unified Table */}
+      <div className="card overflow-hidden">
+        {unifiedSummaries.length === 0 ? (
+          <p className="text-gray-500 text-center py-12 text-lg">No transactions available to generate monthly summary.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-gradient-to-r from-blue-100 to-blue-50 border-b-2 border-blue-300">
+                <tr>
+                  <th className="px-6 py-4 text-center font-bold text-gray-700 border-r border-blue-200">Month</th>
+                  <th className="px-6 py-4 text-left font-bold text-gray-700">Account</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700">Opening (B/D)</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700">Monthly Income</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700">Monthly Expenses</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700">Net Transfers</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700">Closing (C/F)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unifiedSummaries.map((summary, idx) => {
+                  const isEven = idx % 2 === 0
+                  const monthBg = isEven ? 'bg-slate-50' : 'bg-white'
+                  return (
+                    <Fragment key={summary.month}>
+                      {/* Cash Row */}
+                      <tr className={`${monthBg} hover:bg-blue-50/40 transition-colors`}>
+                        <td 
+                          rowSpan={3} 
+                          className="px-6 py-4 font-bold text-gray-800 border-r border-gray-200 text-center align-middle bg-gradient-to-b from-gray-50/30 to-gray-100/30 text-base"
+                        >
+                          {monthLabel(summary.month)}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-gray-700">
+                          <span className="mr-2">💵</span> Cash
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-blue-600">
+                          ₹{(summary.cash.opening || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-green-600">
+                          ₹{(summary.cash.income || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-red-600">
+                          ₹{(summary.cash.expense || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold">
+                          <span className={((summary.cash.transferIn || 0) - (summary.cash.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}>
+                            {((summary.cash.transferIn || 0) - (summary.cash.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.cash.transferIn || 0) - (summary.cash.transferOut || 0)).toLocaleString('en-IN')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-gray-700">
+                          ₹{(summary.cash.closing || 0).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
 
-      {/* Bank/Card Summary */}
-      <SummaryTable
-        summaries={bankSummaries}
-        title="🏦 Bank & Card Account Summary"
-        accountType="bank"
-        onExport={handleExportBank}
-        isExporting={exportingAccount === 'bank'}
-      />
+                      {/* Bank & Card Row */}
+                      <tr className={`${monthBg} hover:bg-blue-50/40 transition-colors`}>
+                        <td className="px-6 py-4 font-medium text-gray-700">
+                          <span className="mr-2">🏦</span> Bank & Card
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-blue-600">
+                          ₹{(summary.bank.opening || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-green-600">
+                          ₹{(summary.bank.income || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-red-600">
+                          ₹{(summary.bank.expense || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold">
+                          <span className={((summary.bank.transferIn || 0) - (summary.bank.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}>
+                            {((summary.bank.transferIn || 0) - (summary.bank.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.bank.transferIn || 0) - (summary.bank.transferOut || 0)).toLocaleString('en-IN')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-gray-700">
+                          ₹{(summary.bank.closing || 0).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+
+                      {/* Combined Total Row */}
+                      <tr className="bg-blue-50/30 hover:bg-blue-50/60 font-semibold border-b-2 border-gray-300">
+                        <td className="px-6 py-4 font-bold text-indigo-900">
+                          <span className="mr-2">💼</span> Total
+                        </td>
+                        <td className="px-6 py-4 text-right text-indigo-900">
+                          ₹{(summary.total.opening || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right text-green-700">
+                          ₹{(summary.total.income || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right text-red-700">
+                          ₹{(summary.total.expense || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 text-right text-teal-700">
+                          <span className={((summary.total.transferIn || 0) - (summary.total.transferOut || 0)) >= 0 ? 'text-teal-700' : 'text-orange-600'}>
+                            {((summary.total.transferIn || 0) - (summary.total.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.total.transferIn || 0) - (summary.total.transferOut || 0)).toLocaleString('en-IN')}
+                          </span>
+                        </td>
+                        <td className={`px-6 py-4 text-right font-black text-lg ${summary.total.closing >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                          ₹{(summary.total.closing || 0).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    </Fragment>
+                  )
+                })}
+
+                {/* Grand Totals */}
+                {/* Grand Total Cash */}
+                <tr className="bg-slate-100 font-bold border-t-2 border-slate-300 hover:bg-slate-200 transition-colors">
+                  <td className="px-6 py-4 text-gray-800 text-center" colSpan={2}>
+                    <span className="mr-2">💵</span> Grand Total - Cash
+                  </td>
+                  <td className="px-6 py-4 text-right text-blue-700">₹{cashTotals.opening.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-green-700">₹{cashTotals.income.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-red-700">₹{cashTotals.expense.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={cashTotals.netTransfers >= 0 ? 'text-teal-700' : 'text-orange-600'}>
+                      {cashTotals.netTransfers >= 0 ? '+' : ''}₹{cashTotals.netTransfers.toLocaleString('en-IN')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right text-gray-800">₹{cashTotals.closing.toLocaleString('en-IN')}</td>
+                </tr>
+
+                {/* Grand Total Bank */}
+                <tr className="bg-slate-100 font-bold hover:bg-slate-200 transition-colors">
+                  <td className="px-6 py-4 text-gray-800 text-center" colSpan={2}>
+                    <span className="mr-2">🏦</span> Grand Total - Bank & Card
+                  </td>
+                  <td className="px-6 py-4 text-right text-blue-700">₹{bankTotals.opening.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-green-700">₹{bankTotals.income.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-red-700">₹{bankTotals.expense.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={bankTotals.netTransfers >= 0 ? 'text-teal-700' : 'text-orange-600'}>
+                      {bankTotals.netTransfers >= 0 ? '+' : ''}₹{bankTotals.netTransfers.toLocaleString('en-IN')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right text-gray-800">₹{bankTotals.closing.toLocaleString('en-IN')}</td>
+                </tr>
+
+                {/* Grand Total Overall */}
+                <tr className="bg-gradient-to-r from-blue-100 to-indigo-50 font-black text-indigo-950 border-t-2 border-b-2 border-indigo-300 hover:from-blue-150 hover:to-indigo-100 transition-colors">
+                  <td className="px-6 py-4 text-center text-indigo-950" colSpan={2}>
+                    <span className="mr-2">💼</span> Grand Total - Overall
+                  </td>
+                  <td className="px-6 py-4 text-right text-blue-900">₹{overallTotals.opening.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-green-800">₹{overallTotals.income.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-red-800">₹{overallTotals.expense.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={overallTotals.netTransfers >= 0 ? 'text-teal-800' : 'text-orange-700'}>
+                      {overallTotals.netTransfers >= 0 ? '+' : ''}₹{overallTotals.netTransfers.toLocaleString('en-IN')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right text-indigo-950 text-base">₹{overallTotals.closing.toLocaleString('en-IN')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

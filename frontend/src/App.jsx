@@ -427,8 +427,12 @@ export default function App() {
           <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} onCalculateBalances={handleCalculateBalances} />
         )}
 
-        {!loading && activeTab === 'monthly-summary' && (
-          <MonthlySummary transactions={transactions} />
+        {activeTab === 'monthly-summary' && (
+          <MonthlySummary
+            transactions={transactions}
+            onRefresh={fetchTransactions}
+            isLoading={loading}
+          />
         )}
 
         {!loading && activeTab === 'import-export' && (

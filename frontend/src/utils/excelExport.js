@@ -17,31 +17,29 @@ export async function exportToExcel(accountType, summaries, transactions) {
       const cashTxs = transactions.filter((t) => t.account && t.account.toLowerCase().includes('cash'))
       const bankTxs = transactions.filter((t) => t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card')))
       
-      createDashboardSheet(wb, summaries.cash, summaries.bank, XLSX)
+      const cashSummaries = summaries.map(s => s.cash)
+      const bankSummaries = summaries.map(s => s.bank)
+
+      createDashboardSheet(wb, cashSummaries, bankSummaries, XLSX)
       createTransactionSheet(wb, 'Cash Transactions', cashTxs, XLSX)
       createTransactionSheet(wb, 'Bank Transactions', bankTxs, XLSX)
-      createSummarySheet(wb, 'Cash Summary', summaries.cash, cashTxs, XLSX)
-      createSummarySheet(wb, 'Bank Summary', summaries.bank, bankTxs, XLSX)
-    } else if (accountType === 'cash') {
-      createDashboardSheet(wb, summaries, [], XLSX)
-      createTransactionSheet(wb, 'Transactions', transactions, XLSX)
-      createSummarySheet(wb, 'Monthly Summary', summaries, transactions, XLSX)
-    } else if (accountType === 'bank') {
-      createDashboardSheet(wb, [], summaries, XLSX)
-      createTransactionSheet(wb, 'Transactions', transactions, XLSX)
-      createSummarySheet(wb, 'Monthly Summary', summaries, transactions, XLSX)
+      createUnifiedSummarySheet(wb, 'Monthly Summary', summaries, XLSX)
+    } else if (accountType === 'summary') {
+      createUnifiedSummarySheet(wb, 'Monthly Summary', summaries, XLSX)
     }
 
-    // Set column widths
+    // Set column widths if not already defined by the sheet builder
     Object.values(wb.Sheets).forEach((sheet) => {
-      sheet['!cols'] = [
-        { wch: 15 }, // Date
-        { wch: 20 }, // Account
-        { wch: 15 }, // Category
-        { wch: 15 }, // Type
-        { wch: 15 }, // Amount
-        { wch: 25 }, // Note/Description
-      ]
+      if (!sheet['!cols']) {
+        sheet['!cols'] = [
+          { wch: 15 }, // Date
+          { wch: 20 }, // Account
+          { wch: 15 }, // Category
+          { wch: 15 }, // Type
+          { wch: 15 }, // Amount
+          { wch: 25 }, // Note/Description
+        ]
+      }
     })
 
     // Generate filename with timestamp
@@ -282,3 +280,140 @@ function createDashboardSheet(wb, cashSummaries, bankSummaries, XLSX) {
 
   XLSX.utils.book_append_sheet(wb, ws, 'Dashboard', 0) // Insert at beginning
 }
+
+/**
+ * Create a unified monthly summary sheet in Excel
+ */
+function createUnifiedSummarySheet(wb, sheetName, unifiedSummaries, XLSX) {
+  const cashTotals = {
+    opening: unifiedSummaries[0]?.cash.opening || 0,
+    income: unifiedSummaries.reduce((sum, s) => sum + (s.cash.income || 0), 0),
+    expense: unifiedSummaries.reduce((sum, s) => sum + (s.cash.expense || 0), 0),
+    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.cash.transferIn || 0) - (s.cash.transferOut || 0)), 0),
+    closing: unifiedSummaries[unifiedSummaries.length - 1]?.cash.closing || 0
+  }
+
+  const bankTotals = {
+    opening: unifiedSummaries[0]?.bank.opening || 0,
+    income: unifiedSummaries.reduce((sum, s) => sum + (s.bank.income || 0), 0),
+    expense: unifiedSummaries.reduce((sum, s) => sum + (s.bank.expense || 0), 0),
+    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.bank.transferIn || 0) - (s.bank.transferOut || 0)), 0),
+    closing: unifiedSummaries[unifiedSummaries.length - 1]?.bank.closing || 0
+  }
+
+  const overallTotals = {
+    opening: unifiedSummaries[0]?.total.opening || 0,
+    income: unifiedSummaries.reduce((sum, s) => sum + (s.total.income || 0), 0),
+    expense: unifiedSummaries.reduce((sum, s) => sum + (s.total.expense || 0), 0),
+    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.total.transferIn || 0) - (s.total.transferOut || 0)), 0),
+    closing: unifiedSummaries[unifiedSummaries.length - 1]?.total.closing || 0
+  }
+
+  const data = [
+    ['Monthly Summary Report'],
+    ['Generated on:', new Date().toLocaleString('en-IN')],
+    [''],
+    ['Month', 'Account', 'Opening Balance', 'Monthly Income', 'Monthly Expenses', 'Net Transfers', 'Closing Balance'],
+  ]
+
+  for (const s of unifiedSummaries) {
+    data.push([
+      monthLabel(s.month),
+      'Cash',
+      s.cash.opening || 0,
+      s.cash.income || 0,
+      s.cash.expense || 0,
+      (s.cash.transferIn || 0) - (s.cash.transferOut || 0),
+      s.cash.closing || 0,
+    ])
+    data.push([
+      '',
+      'Bank & Card',
+      s.bank.opening || 0,
+      s.bank.income || 0,
+      s.bank.expense || 0,
+      (s.bank.transferIn || 0) - (s.bank.transferOut || 0),
+      s.bank.closing || 0,
+    ])
+    data.push([
+      '',
+      'Total',
+      s.total.opening || 0,
+      s.total.income || 0,
+      s.total.expense || 0,
+      (s.total.transferIn || 0) - (s.total.transferOut || 0),
+      s.total.closing || 0,
+    ])
+  }
+
+  data.push([''])
+  data.push(['Grand Total - Cash', '', cashTotals.opening, cashTotals.income, cashTotals.expense, cashTotals.netTransfers, cashTotals.closing])
+  data.push(['Grand Total - Bank & Card', '', bankTotals.opening, bankTotals.income, bankTotals.expense, bankTotals.netTransfers, bankTotals.closing])
+  data.push(['Grand Total - Overall', '', overallTotals.opening, overallTotals.income, overallTotals.expense, overallTotals.netTransfers, overallTotals.closing])
+
+  const ws = XLSX.utils.aoa_to_sheet(data)
+
+  // Set column widths
+  ws['!cols'] = [
+    { wch: 18 }, // Month
+    { wch: 15 }, // Account
+    { wch: 18 }, // Opening Balance
+    { wch: 18 }, // Monthly Income
+    { wch: 18 }, // Monthly Expenses
+    { wch: 18 }, // Net Transfers
+    { wch: 18 }, // Closing Balance
+  ]
+
+  // Style header row (row 3, index 3)
+  for (let i = 0; i < 7; i++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 3, c: i })
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: 'FF4472C4' } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      }
+    }
+  }
+
+  // Format numbers as currency in data rows
+  const numMonths = unifiedSummaries.length
+  for (let row = 4; row < 4 + (numMonths * 3); row++) {
+    for (let col = 2; col < 7; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: row, c: col })
+      const cell = ws[cellRef]
+      if (cell) {
+        cell.z = '#,##0.00'
+      }
+    }
+  }
+
+  // Format grand totals rows (the last three rows after the empty line)
+  const totalsStartRow = 4 + (numMonths * 3) + 1
+  for (let row = totalsStartRow; row < totalsStartRow + 3; row++) {
+    for (let col = 2; col < 7; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: row, c: col })
+      const cell = ws[cellRef]
+      if (cell) {
+        cell.z = '#,##0.00'
+      }
+    }
+
+    // Apply color to the overall grand total row (last row)
+    if (row === totalsStartRow + 2) {
+      for (let col = 0; col < 7; col++) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col })
+        const cell = ws[cellRef]
+        if (cell) {
+          cell.s = {
+            font: { bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: 'FF70AD47' } },
+          }
+        }
+      }
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, sheetName)
+}
+

@@ -257,3 +257,80 @@ export function injectVirtualCarryTransactions(transactions = []) {
   
   return result
 }
+
+/**
+ * Computes a unified monthly summary where Cash, Bank & Card, and Total are computed
+ * for every active month. For months where one type has no transactions, the closing
+ * balance is carried forward as the opening balance.
+ *
+ * @param {Array} transactions - All transactions
+ * @returns {Array} Unified summaries with { month, cash, bank, total }
+ */
+export function getUnifiedMonthlySummaries(transactions = []) {
+  const cashFilter = (account) => account && account.toLowerCase().includes('cash')
+  const bankFilter = (account) => account && !account.toLowerCase().includes('cash')
+
+  const cashRaw = getAccountMonthlyBalanceSummaries(transactions, cashFilter)
+  const bankRaw = getAccountMonthlyBalanceSummaries(transactions, bankFilter)
+
+  // Collect all unique months from both lists
+  const allMonths = Array.from(new Set([
+    ...cashRaw.map(s => s.month),
+    ...bankRaw.map(s => s.month)
+  ])).sort()
+
+  const unified = []
+  let prevCashClosing = 0
+  let prevBankClosing = 0
+
+  for (const ym of allMonths) {
+    let cash = cashRaw.find(s => s.month === ym)
+    if (!cash) {
+      cash = {
+        month: ym,
+        opening: prevCashClosing,
+        income: 0,
+        expense: 0,
+        transferIn: 0,
+        transferOut: 0,
+        closing: prevCashClosing
+      }
+    } else {
+      prevCashClosing = cash.closing
+    }
+
+    let bank = bankRaw.find(s => s.month === ym)
+    if (!bank) {
+      bank = {
+        month: ym,
+        opening: prevBankClosing,
+        income: 0,
+        expense: 0,
+        transferIn: 0,
+        transferOut: 0,
+        closing: prevBankClosing
+      }
+    } else {
+      prevBankClosing = bank.closing
+    }
+
+    const total = {
+      month: ym,
+      opening: cash.opening + bank.opening,
+      income: cash.income + bank.income,
+      expense: cash.expense + bank.expense,
+      transferIn: cash.transferIn + bank.transferIn,
+      transferOut: cash.transferOut + bank.transferOut,
+      closing: cash.closing + bank.closing
+    }
+
+    unified.push({
+      month: ym,
+      cash,
+      bank,
+      total
+    })
+  }
+
+  return unified
+}
