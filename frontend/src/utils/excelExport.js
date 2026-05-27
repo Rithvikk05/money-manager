@@ -1,4 +1,3 @@
-import XLSX from 'xlsx'
 import { monthLabel } from './monthlyBalances'
 
 /**
@@ -9,19 +8,21 @@ import { monthLabel } from './monthlyBalances'
  */
 export async function exportToExcel(accountType, summaries, transactions) {
   try {
+    // Dynamically import XLSX for Vite compatibility
+    const XLSX = await import('xlsx')
     const wb = XLSX.utils.book_new()
 
     if (accountType === 'all') {
       // Export all accounts
-      createSummarySheet(wb, 'Cash Summary', summaries.cash, transactions.filter((t) => t.account && t.account.toLowerCase().includes('cash')))
-      createSummarySheet(wb, 'Bank Summary', summaries.bank, transactions.filter((t) => t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card'))))
-      createDashboardSheet(wb, summaries.cash, summaries.bank)
+      createSummarySheet(wb, 'Cash Summary', summaries.cash, transactions.filter((t) => t.account && t.account.toLowerCase().includes('cash')), XLSX)
+      createSummarySheet(wb, 'Bank Summary', summaries.bank, transactions.filter((t) => t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card'))), XLSX)
+      createDashboardSheet(wb, summaries.cash, summaries.bank, XLSX)
     } else if (accountType === 'cash') {
-      createDashboardSheet(wb, summaries, [])
-      createSummarySheet(wb, 'Monthly Summary', summaries, transactions)
+      createDashboardSheet(wb, summaries, [], XLSX)
+      createSummarySheet(wb, 'Monthly Summary', summaries, transactions, XLSX)
     } else if (accountType === 'bank') {
-      createDashboardSheet(wb, [], summaries)
-      createSummarySheet(wb, 'Monthly Summary', summaries, transactions)
+      createDashboardSheet(wb, [], summaries, XLSX)
+      createSummarySheet(wb, 'Monthly Summary', summaries, transactions, XLSX)
     }
 
     // Set column widths
@@ -50,7 +51,7 @@ export async function exportToExcel(accountType, summaries, transactions) {
 /**
  * Create a summary sheet with monthly data
  */
-function createSummarySheet(wb, sheetName, summaries, transactions) {
+function createSummarySheet(wb, sheetName, summaries, transactions, XLSX) {
   const data = [
     ['Monthly Summary Report'],
     ['Generated on:', new Date().toLocaleString('en-IN')],
@@ -117,7 +118,7 @@ function createSummarySheet(wb, sheetName, summaries, transactions) {
 /**
  * Create a dashboard sheet with key metrics
  */
-function createDashboardSheet(wb, cashSummaries, bankSummaries) {
+function createDashboardSheet(wb, cashSummaries, bankSummaries, XLSX) {
   const cashData = cashSummaries.length > 0
   const bankData = bankSummaries.length > 0
 
