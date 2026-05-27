@@ -35,6 +35,7 @@ const deriveAccountType = (account) => {
 export default function TransactionForm({ onSubmit, editData, onCancel, initialData, onDelete }) {
   const defaultData = {
     date: new Date().toISOString().split('T')[0],
+    time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     accountType: '',
     account: '',
     category: '',
@@ -144,6 +145,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
     const amount = parseFloat(formData.amount)
     const date = formData.date || new Date().toISOString().split('T')[0]
+    const time = formData.time || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     const directionLabel = transferDirection === 'bank-to-cash' ? 'Bank → Cash' 
       : transferDirection === 'cash-to-bank' ? 'Cash → Bank' 
       : `${transferFromAccount} → ${transferToAccount}`
@@ -161,6 +163,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
         currency: formData.currency || 'INR',
         type: 'Transfer-Out',
         description: `Withdrawal: ${transferFromAccount} → Cash`,
+        time,
       })
       // Transfer-In to Cash
       setTimeout(() => {
@@ -174,6 +177,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
           currency: formData.currency || 'INR',
           type: 'Transfer-In',
           description: `Deposit: ${transferFromAccount} → Cash`,
+          time,
         })
       }, 300)
     } else if (transferDirection === 'cash-to-bank') {
@@ -188,6 +192,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
         currency: formData.currency || 'INR',
         type: 'Transfer-Out',
         description: `Withdrawal: Cash → ${transferFromAccount}`,
+        time,
       })
       // Transfer-In to Bank
       setTimeout(() => {
@@ -201,6 +206,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
           currency: formData.currency || 'INR',
           type: 'Transfer-In',
           description: `Deposit: Cash → ${transferFromAccount}`,
+          time,
         })
       }, 300)
     } else if (transferDirection === 'bank-to-bank') {
@@ -215,6 +221,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
         currency: formData.currency || 'INR',
         type: 'Transfer-Out',
         description: `Bank Transfer: ${transferFromAccount} → ${transferToAccount}`,
+        time,
       })
       // Transfer-In to Destination Bank
       setTimeout(() => {
@@ -228,6 +235,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
           currency: formData.currency || 'INR',
           type: 'Transfer-In',
           description: `Bank Transfer: ${transferFromAccount} → ${transferToAccount}`,
+          time,
         })
       }, 300)
     }
@@ -318,16 +326,28 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Date */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  className="input-field"
-                />
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+                  <input
+                    type="time"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleChange}
+                    className="input-field"
+                  />
+                </div>
               </div>
 
               {/* Bank Account - Source */}
@@ -471,17 +491,29 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
           /* Normal Transaction Form */
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Date */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  className="input-field"
-                />
-                {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    className="input-field"
+                  />
+                  {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+                  <input
+                    type="time"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleChange}
+                    className="input-field"
+                  />
+                </div>
               </div>
 
               {/* Type */}

@@ -233,7 +233,10 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
               {selectedDayTransactions.map((transaction) => (
                 <div key={transaction.id} className="p-2 border rounded flex justify-between items-center">
                   <div>
-                    <div className="font-medium">{transaction.note || transaction.category || '—'}</div>
+                    <div className="font-medium">
+                      {transaction.time && <span className="mr-2 text-xs text-gray-500 bg-gray-100 px-1 rounded">{transaction.time}</span>}
+                      {transaction.note || transaction.category || '—'}
+                    </div>
                     <div className="text-sm text-gray-600">
                       {transaction.category} • ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                     </div>

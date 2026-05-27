@@ -38,6 +38,7 @@ const transactionSchema = new mongoose.Schema({
   currency: { type: String, default: 'INR' },
   type: { type: String, required: true },
   description: { type: String, default: '' },
+  time: { type: String, default: '' },
   created_at: { type: Date, default: Date.now }
 });
 
@@ -68,6 +69,7 @@ const deletedTransactionSchema = new mongoose.Schema({
   currency: { type: String, default: 'INR' },
   type: { type: String, required: true },
   description: { type: String, default: '' },
+  time: { type: String, default: '' },
   deleted_at: { type: Date, default: Date.now },
   original_created_at: { type: Date }
 });
@@ -152,6 +154,7 @@ const initDatabase = async () => {
           currency TEXT DEFAULT 'INR',
           type TEXT NOT NULL,
           description TEXT,
+          time TEXT DEFAULT '',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -171,6 +174,7 @@ const initDatabase = async () => {
           currency TEXT DEFAULT 'INR',
           type TEXT NOT NULL,
           description TEXT,
+          time TEXT DEFAULT '',
           deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           original_created_at DATETIME
         )
@@ -494,7 +498,7 @@ app.get('/api/transactions', verifyToken, async (req, res) => {
 // Add transaction (protected - per user)
 app.post('/api/transactions', verifyToken, async (req, res) => {
   try {
-    const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
     
     if (useMongo) {
       const newTx = new Transaction({
@@ -508,16 +512,17 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
         inr: amount,
         currency: currency || 'INR',
         type,
-        description: description || ''
+        description: description || '',
+        time: time || ''
       });
       await newTx.save();
       res.json({ id: newTx._id, message: 'Transaction added successfully' });
     } else {
       const lastId = await dbRun(
         db,
-        `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [req.userId, date, account, category, subcategory, note, amount, amount, currency, type, description]
+        `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.userId, date, account, category, subcategory, note, amount, amount, currency, type, description, time || '']
       );
       res.json({ id: lastId, message: 'Transaction added successfully' });
     }
@@ -530,12 +535,12 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
 // Update transaction (protected - per user)
 app.put('/api/transactions/:id', verifyToken, async (req, res) => {
   try {
-    const { date, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
     
     if (useMongo) {
       const tx = await Transaction.findOneAndUpdate(
         { _id: req.params.id, userId: req.userId },
-        { date, account, category, subcategory: subcategory || '', note: note || '', amount, inr: amount, currency: currency || 'INR', type, description: description || '' }
+        { date, time: time || '', account, category, subcategory: subcategory || '', note: note || '', amount, inr: amount, currency: currency || 'INR', type, description: description || '' }
       );
       if (!tx) return res.status(404).json({ error: 'Transaction not found' });
       res.json({ message: 'Transaction updated successfully' });
@@ -543,9 +548,9 @@ app.put('/api/transactions/:id', verifyToken, async (req, res) => {
       await dbRun(
         db,
         `UPDATE transactions 
-         SET date=?, account=?, category=?, subcategory=?, note=?, amount=?, inr=?, currency=?, type=?, description=?
+         SET date=?, time=?, account=?, category=?, subcategory=?, note=?, amount=?, inr=?, currency=?, type=?, description=?
          WHERE id=? AND user_id=?`,
-        [date, account, category, subcategory, note, amount, amount, currency, type, description, req.params.id, req.userId]
+        [date, time || '', account, category, subcategory, note, amount, amount, currency, type, description, req.params.id, req.userId]
       );
       res.json({ message: 'Transaction updated successfully' });
     }
@@ -576,6 +581,7 @@ app.delete('/api/transactions/:id', verifyToken, async (req, res) => {
         currency: tx.currency,
         type: tx.type,
         description: tx.description,
+        time: tx.time,
         original_created_at: tx.created_at
       });
       await deletedTx.save();
@@ -591,9 +597,9 @@ app.delete('/api/transactions/:id', verifyToken, async (req, res) => {
       // Move to deleted_transactions
       await dbRun(
         db,
-        `INSERT INTO deleted_transactions (user_id, transaction_id, date, account, category, subcategory, note, amount, inr, currency, type, description, original_created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [tx.user_id, tx.id, tx.date, tx.account, tx.category, tx.subcategory, tx.note, tx.amount, tx.inr, tx.currency, tx.type, tx.description, tx.created_at]
+        `INSERT INTO deleted_transactions (user_id, transaction_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time, original_created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [tx.user_id, tx.id, tx.date, tx.account, tx.category, tx.subcategory, tx.note, tx.amount, tx.inr, tx.currency, tx.type, tx.description, tx.time, tx.created_at]
       );
       
       // Delete from transactions
@@ -642,6 +648,7 @@ app.post('/api/deleted-transactions/:id/restore', verifyToken, async (req, res) 
         currency: deletedTx.currency,
         type: deletedTx.type,
         description: deletedTx.description,
+        time: deletedTx.time,
         created_at: deletedTx.original_created_at
       });
       await restoredTx.save();
@@ -657,9 +664,9 @@ app.post('/api/deleted-transactions/:id/restore', verifyToken, async (req, res) 
       // Restore to transactions
       const lastId = await dbRun(
         db,
-        `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [deletedTx.user_id, deletedTx.date, deletedTx.account, deletedTx.category, deletedTx.subcategory, deletedTx.note, deletedTx.amount, deletedTx.inr, deletedTx.currency, deletedTx.type, deletedTx.description, deletedTx.original_created_at]
+        `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [deletedTx.user_id, deletedTx.date, deletedTx.account, deletedTx.category, deletedTx.subcategory, deletedTx.note, deletedTx.amount, deletedTx.inr, deletedTx.currency, deletedTx.type, deletedTx.description, deletedTx.time, deletedTx.original_created_at]
       );
       
       // Delete from deleted_transactions
@@ -752,6 +759,7 @@ app.get('/api/export/excel', verifyToken, async (req, res) => {
           currency: item.currency,
           type: item.type,
           description: item.description,
+          time: item.time,
           created_at: item.created_at
         };
       });

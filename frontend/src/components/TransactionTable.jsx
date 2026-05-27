@@ -102,8 +102,9 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
     }
   }
 
-  // Get unique categories
+  // Get unique categories and accounts
   const categories = ['All', ...new Set(transactions.map((t) => t.category).filter(Boolean))]
+  const uniqueAccounts = ['All', ...new Set(transactions.map((t) => t.account).filter(Boolean))]
 
   // Filter transactions
   let filtered = transactions.filter((t) => {
@@ -117,12 +118,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
     const matchesCategory = filterCategory === 'All' || t.category === filterCategory
     
     // Filter by account type
-    let matchesAccountType = filterAccountType === 'All'
-    if (filterAccountType === 'Cash') {
-      matchesAccountType = t.account && t.account.toLowerCase().includes('cash')
-    } else if (filterAccountType === 'Bank') {
-      matchesAccountType = t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card'))
-    }
+    const matchesAccountType = filterAccountType === 'All' || t.account === filterAccountType
 
     return matchesSearch && matchesType && matchesCategory && matchesAccountType
   })
@@ -173,9 +169,9 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
             <select value={filterAccountType} onChange={(e) => setFilterAccountType(e.target.value)} className="input-field">
-              <option>All</option>
-              <option>Cash</option>
-              <option>Bank</option>
+              {uniqueAccounts.map(acc => (
+                <option key={acc} value={acc}>{acc}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -219,7 +215,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
             <table className="w-full text-sm">
               <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Date</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Date & Time</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-700">Account</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-700">Category</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-700">Note</th>
@@ -231,7 +227,10 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
               <tbody>
                 {filtered.map((transaction, index) => (
                   <tr key={transaction.id} className={`border-b hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-4 py-3 text-gray-700 font-medium">{formatDate(transaction.date)}</td>
+                    <td className="px-4 py-3 text-gray-700 font-medium">
+                      {formatDate(transaction.date)}
+                      {transaction.time && <div className="text-xs text-gray-400">{transaction.time}</div>}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{transaction.account}</td>
                     <td className="px-4 py-3">{transaction.category}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{transaction.note}</td>

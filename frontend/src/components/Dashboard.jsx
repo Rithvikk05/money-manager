@@ -71,19 +71,26 @@ export default function Dashboard({ transactions, stats }) {
   const cashCurrentMonth = cashMonthlySummaries.length > 0 ? cashMonthlySummaries[cashMonthlySummaries.length - 1] : null
 
   // Current actual balance = only this month's net activity (income - expense + transfers)
-  const bankBalance = bankCurrentMonth ? (bankCurrentMonth.income - bankCurrentMonth.expense + bankCurrentMonth.transferIn - bankCurrentMonth.transferOut) : 0
-  const cashBalance = cashCurrentMonth ? (cashCurrentMonth.income - cashCurrentMonth.expense + cashCurrentMonth.transferIn - cashCurrentMonth.transferOut) : 0
+  
+  // ---- Per-account breakdown with current month balance ----
+  const uniqueAccounts = useMemo(() => {
+    return [...new Set(transactions.map(t => t.account).filter(Boolean))]
+  }, [transactions])
 
-  // ---- Per-bank-account breakdown with current month balance ----
-  const bankAccounts = {}
-  const bankAccountsCurrentMonth = {}
+  const accountSummaries = {}
+  uniqueAccounts.forEach(acc => {
+    const accTxs = transactions.filter(t => t.account === acc)
+    const summaries = getAccountMonthlyBalanceSummaries(accTxs, (a) => a === acc)
+    accountSummaries[acc] = summaries.length > 0 ? summaries[summaries.length - 1] : null
+  })
+
+  const accountTotals = {}
   
   transactions.forEach((t) => {
-    if (!isBankAccount(t.account)) return
-    
     const acc = t.account
-    if (!bankAccounts[acc]) bankAccounts[acc] = 0
-    if (!bankAccountsCurrentMonth[acc]) bankAccountsCurrentMonth[acc] = { income: 0, expense: 0, transferIn: 0, transferOut: 0 }
+    if (!acc) return
+    
+    if (!accountTotals[acc]) accountTotals[acc] = 0
     
     // Skip carry transactions for account totals
     if (isCarryTransaction(t)) return
@@ -93,16 +100,10 @@ export default function Dashboard({ transactions, stats }) {
     
     // Overall account balance
     if (type === 'income' || type === 'transfer-in') {
-      bankAccounts[acc] += amount
+      accountTotals[acc] += amount
     } else if (type === 'expense' || type === 'transfer-out') {
-      bankAccounts[acc] -= amount
+      accountTotals[acc] -= amount
     }
-    
-    // Current month activity
-    if (type === 'income') bankAccountsCurrentMonth[acc].income += amount
-    else if (type === 'expense') bankAccountsCurrentMonth[acc].expense += amount
-    else if (type === 'transfer-in') bankAccountsCurrentMonth[acc].transferIn += amount
-    else if (type === 'transfer-out') bankAccountsCurrentMonth[acc].transferOut += amount
   })
 
   // Category breakdown
@@ -148,26 +149,33 @@ export default function Dashboard({ transactions, stats }) {
         </div>
       </div>
 
-      {/* Balance by Account Type — Individual Bank Accounts */}
+      {/* Balance by Account Type — Individual Accounts */}
       <div className="space-y-6">
-        {/* Individual Bank Accounts */}
-        {Object.keys(bankAccounts).length > 0 && (
+        {uniqueAccounts.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Object.entries(bankAccounts).map(([accName, totalBalance]) => {
-              const currentMonth = bankAccountsCurrentMonth[accName]
+            {uniqueAccounts.map((accName) => {
+              const currentMonth = accountSummaries[accName]
               const currentBalance = currentMonth ? (currentMonth.income - currentMonth.expense + currentMonth.transferIn - currentMonth.transferOut) : 0
+              
+              // Helper to decide card colors based on account name
+              const isCash = accName.toLowerCase().includes('cash')
+              const colorTheme = isCash 
+                ? 'from-emerald-50 to-green-50 border-emerald-500 text-emerald-600'
+                : 'from-indigo-50 to-blue-50 border-indigo-500 text-indigo-600'
+              const textTheme = isCash ? 'text-emerald-600' : 'text-indigo-600'
+              
               return (
-                <div key={accName} className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-l-4 border-indigo-500">
+                <div key={accName} className={`card bg-gradient-to-br border-l-4 ${colorTheme}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-gray-700 text-sm font-semibold uppercase">🏦 {accName}</p>
-                    <span className={`text-2xl font-bold ${currentBalance >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+                    <p className="text-gray-700 text-sm font-semibold uppercase">{accName}</p>
+                    <span className={`text-2xl font-bold ${currentBalance >= 0 ? textTheme : 'text-red-500'}`}>
                       ₹{currentBalance.toLocaleString('en-IN')}
                     </span>
                   </div>
                   {/* Current month activity */}
                   {currentMonth && (
-                    <div className="mt-2 space-y-1 border-t border-indigo-100 pt-3 text-xs">
-                      <p className="text-gray-500 font-semibold mb-1">{monthLabel(bankCurrentMonth?.month)} Activity</p>
+                    <div className={`mt-2 space-y-1 border-t pt-3 text-xs ${isCash ? 'border-emerald-100' : 'border-indigo-100'}`}>
+                      <p className="text-gray-500 font-semibold mb-1">{monthLabel(currentMonth.month)} Activity</p>
                       {currentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{currentMonth.income.toLocaleString('en-IN')}</span></div>}
                       {currentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{currentMonth.expense.toLocaleString('en-IN')}</span></div>}
                       {currentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{currentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
@@ -179,29 +187,6 @@ export default function Dashboard({ transactions, stats }) {
             })}
           </div>
         )}
-
-        {/* Cash Balance Card */}
-        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-l-4 border-emerald-500">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-gray-700 text-sm font-semibold uppercase flex items-center gap-2">
-              💵 Cash Balance
-            </p>
-            <span className={`text-2xl font-bold ${cashBalance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-              ₹{cashBalance.toLocaleString('en-IN')}
-            </span>
-          </div>
-          {/* Current month activity only (no opening balance from past) */}
-          {cashCurrentMonth && (
-            <div className="mt-2 space-y-1 border-t border-emerald-100 pt-3 text-xs">
-              <p className="text-gray-500 font-semibold mb-1">{monthLabel(cashCurrentMonth.month)} Activity</p>
-              {cashCurrentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{cashCurrentMonth.income.toLocaleString('en-IN')}</span></div>}
-              {cashCurrentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{cashCurrentMonth.expense.toLocaleString('en-IN')}</span></div>}
-              {cashCurrentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{cashCurrentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
-              {cashCurrentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{cashCurrentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
-              {(cashCurrentMonth.income > 0 || cashCurrentMonth.expense > 0) && <p className="text-gray-500 text-xs mt-1">↓ Current available balance shown above ↑</p>}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Charts */}

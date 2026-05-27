@@ -65,28 +65,44 @@ export function getMonthlyBalanceSummaries(transactions = [], orderedMonths) {
     ? [...orderedMonths]
     : Object.keys(monthMap)
 
+  // Get account specific summaries to correctly handle C/F per account
+  const uniqueAccounts = [...new Set((Array.isArray(transactions) ? transactions : []).map(t => t.account).filter(Boolean))]
+  const accountSummaries = uniqueAccounts.map(acc => 
+    getAccountMonthlyBalanceSummaries(transactions, a => a === acc)
+  )
+
   const summaries = []
-  let previousClosing = 0
 
   for (const ym of [...months].sort()) {
     const monthTransactions = Array.isArray(monthMap[ym]) ? monthMap[ym] : []
     let income = 0
     let expense = 0
-    let opening = null
-    let closing = null
+
+    let opening = 0
+    let closing = 0
+
+    // Sum up the opening and closing balances from all accounts for this month
+    for (const accSummaryList of accountSummaries) {
+      const accMonth = accSummaryList.find(s => s.month === ym)
+      if (accMonth) {
+        opening += accMonth.opening
+        closing += accMonth.closing
+      } else {
+        // If account had no activity this month, its balance carries over from the last active month
+        const pastMonths = accSummaryList.filter(s => s.month <= ym)
+        if (pastMonths.length > 0) {
+          const last = pastMonths[pastMonths.length - 1]
+          opening += last.closing
+          closing += last.closing
+        }
+      }
+    }
 
     for (const transaction of monthTransactions) {
       const amount = Number(transaction.amount) || 0
 
-      if (isExplicitOpening(transaction)) {
-        opening = (opening || 0) + amount
-        continue
-      }
-
-      if (isExplicitClosing(transaction)) {
-        closing = (closing || 0) + amount
-        continue
-      }
+      // Skip explicit carry-forwards as they are already handled by account summaries
+      if (isCarryTransaction(transaction)) continue
 
       if ((transaction.type || '').toLowerCase() === 'income') {
         income += amount
@@ -95,18 +111,13 @@ export function getMonthlyBalanceSummaries(transactions = [], orderedMonths) {
       }
     }
 
-    const resolvedOpening = opening !== null ? opening : previousClosing
-    const resolvedClosing = closing !== null ? closing : resolvedOpening + income - expense
-
     summaries.push({
       month: ym,
-      opening: resolvedOpening,
+      opening: opening,
       income,
       expense,
-      closing: resolvedClosing,
+      closing: closing,
     })
-
-    previousClosing = resolvedClosing
   }
 
   return summaries
