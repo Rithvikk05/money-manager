@@ -37,12 +37,54 @@ const formatDate = (dateString) => {
   }
 }
 
+// Determine if an account belongs to Bank (Card) or Cash
+const isBankAccount = (account) => {
+  if (!account) return false
+  if (account === 'Cash') return false
+  // Bank accounts contain "Bank" or the bank emoji
+  return account.includes('Bank') || account.includes('🏦')
+}
+
+const isCashAccount = (account) => {
+  return account === 'Cash'
+}
+
 export default function Dashboard({ transactions, stats }) {
   const monthlySummaries = useMemo(() => getMonthlyBalanceSummaries(transactions), [transactions])
 
   const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
   const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
   const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
+
+  // ---- Balance by account type (Bank / Cash) ----
+  const computeAccountBalance = (filterFn) => {
+    let bal = 0
+    transactions.forEach((t) => {
+      if (isCarryTransaction(t) || !filterFn(t.account)) return
+      if (t.type === 'Income' || t.type === 'Transfer-In') {
+        bal += t.amount || 0
+      } else if (t.type === 'Expense' || t.type === 'Transfer-Out') {
+        bal -= t.amount || 0
+      }
+    })
+    return bal
+  }
+
+  const bankBalance = computeAccountBalance(isBankAccount)
+  const cashBalance = computeAccountBalance(isCashAccount)
+
+  // ---- Per-bank-account breakdown ----
+  const bankAccounts = {}
+  transactions.forEach((t) => {
+    if (isCarryTransaction(t) || !isBankAccount(t.account)) return
+    const acc = t.account
+    if (!bankAccounts[acc]) bankAccounts[acc] = 0
+    if (t.type === 'Income' || t.type === 'Transfer-In') {
+      bankAccounts[acc] += t.amount || 0
+    } else if (t.type === 'Expense' || t.type === 'Transfer-Out') {
+      bankAccounts[acc] -= t.amount || 0
+    }
+  })
 
   // Category breakdown
   const expenseByCategory = transactions
@@ -80,10 +122,50 @@ export default function Dashboard({ transactions, stats }) {
           <p className="text-3xl font-bold text-red-600 mt-2">₹{totalExpense.toLocaleString('en-IN')}</p>
         </div>
         <div className={`stat-card ${balance >= 0 ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-600' : 'bg-gradient-to-br from-orange-50 to-red-50 border-l-4 border-orange-600'}`}>
-          <p className="text-gray-600 text-sm font-semibold uppercase">Balance</p>
+          <p className="text-gray-600 text-sm font-semibold uppercase">Net Balance</p>
           <p className={`text-3xl font-bold mt-2 ${balance >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
             ₹{balance.toLocaleString('en-IN')}
           </p>
+        </div>
+      </div>
+
+      {/* Balance by Account Type */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Bank Balance Card */}
+        <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-l-4 border-indigo-500">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-700 text-sm font-semibold uppercase flex items-center gap-2">
+              🏦 Bank (Card) Balance
+            </p>
+            <span className={`text-2xl font-bold ${bankBalance >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+              ₹{bankBalance.toLocaleString('en-IN')}
+            </span>
+          </div>
+          {/* Per-bank breakdown */}
+          {Object.keys(bankAccounts).length > 0 && (
+            <div className="mt-3 space-y-2 border-t border-indigo-100 pt-3">
+              {Object.entries(bankAccounts).map(([acc, bal]) => (
+                <div key={acc} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">{acc}</span>
+                  <span className={`font-semibold ${bal >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+                    ₹{bal.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Cash Balance Card */}
+        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-l-4 border-emerald-500">
+          <div className="flex items-center justify-between">
+            <p className="text-gray-700 text-sm font-semibold uppercase flex items-center gap-2">
+              💵 Cash Balance
+            </p>
+            <span className={`text-2xl font-bold ${cashBalance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              ₹{cashBalance.toLocaleString('en-IN')}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -137,6 +219,7 @@ export default function Dashboard({ transactions, stats }) {
             <thead className="bg-gray-100 border-b">
               <tr>
                 <th className="text-left px-4 py-2">Date</th>
+                <th className="text-left px-4 py-2">Account</th>
                 <th className="text-left px-4 py-2">Category</th>
                 <th className="text-left px-4 py-2">Description</th>
                 <th className="text-right px-4 py-2">Amount</th>
@@ -147,13 +230,22 @@ export default function Dashboard({ transactions, stats }) {
               {transactions.slice(0, 10).map((t) => (
                 <tr key={t.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-2 text-gray-700">{formatDate(t.date)}</td>
+                  <td className="px-4 py-2 text-gray-600">{t.account}</td>
                   <td className="px-4 py-2">{t.category}</td>
                   <td className="px-4 py-2 text-gray-600">{t.note}</td>
-                  <td className={`px-4 py-2 text-right font-semibold ${t.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
+                  <td className={`px-4 py-2 text-right font-semibold ${
+                    t.type === 'Income' || t.type === 'Transfer-In' ? 'text-green-600' : 'text-red-600'
+                  }`}>
                     ₹{(t.amount || 0).toLocaleString('en-IN')}
                   </td>
                   <td className="px-4 py-2 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${t.type === 'Income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                      t.type === 'Income' ? 'bg-green-100 text-green-800' 
+                        : t.type === 'Expense' ? 'bg-red-100 text-red-800'
+                        : t.type === 'Transfer-In' ? 'bg-teal-100 text-teal-800'
+                        : t.type === 'Transfer-Out' ? 'bg-orange-100 text-orange-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
                       {t.type}
                     </span>
                   </td>

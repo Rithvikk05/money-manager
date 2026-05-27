@@ -227,7 +227,11 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
                           ? 'bg-green-100 text-green-800'
                           : transaction.type === 'Expense'
                             ? 'bg-red-100 text-red-800'
-                            : 'bg-blue-100 text-blue-800'
+                            : transaction.type === 'Transfer-In'
+                              ? 'bg-teal-100 text-teal-800'
+                              : transaction.type === 'Transfer-Out'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-blue-100 text-blue-800'
                       }`}>
                         {transaction.type}
                       </span>
