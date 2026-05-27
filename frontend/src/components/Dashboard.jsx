@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getMonthlyBalanceSummaries, isCarryTransaction } from '../utils/monthlyBalances'
+import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel } from '../utils/monthlyBalances'
 
 const formatDate = (dateString) => {
   try {
@@ -56,22 +56,22 @@ export default function Dashboard({ transactions, stats }) {
   const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
   const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
 
-  // ---- Balance by account type (Bank / Cash) ----
-  const computeAccountBalance = (filterFn) => {
-    let bal = 0
-    transactions.forEach((t) => {
-      if (isCarryTransaction(t) || !filterFn(t.account)) return
-      if (t.type === 'Income' || t.type === 'Transfer-In') {
-        bal += t.amount || 0
-      } else if (t.type === 'Expense' || t.type === 'Transfer-Out') {
-        bal -= t.amount || 0
-      }
-    })
-    return bal
-  }
+  // ---- Monthly balance summaries per account type (with carry-forward) ----
+  const bankMonthlySummaries = useMemo(
+    () => getAccountMonthlyBalanceSummaries(transactions, isBankAccount),
+    [transactions]
+  )
+  const cashMonthlySummaries = useMemo(
+    () => getAccountMonthlyBalanceSummaries(transactions, isCashAccount),
+    [transactions]
+  )
 
-  const bankBalance = computeAccountBalance(isBankAccount)
-  const cashBalance = computeAccountBalance(isCashAccount)
+  const bankBalance = bankMonthlySummaries.length > 0 ? bankMonthlySummaries[bankMonthlySummaries.length - 1].closing : 0
+  const cashBalance = cashMonthlySummaries.length > 0 ? cashMonthlySummaries[cashMonthlySummaries.length - 1].closing : 0
+
+  // Current month summaries for the cards
+  const bankCurrentMonth = bankMonthlySummaries.length > 0 ? bankMonthlySummaries[bankMonthlySummaries.length - 1] : null
+  const cashCurrentMonth = cashMonthlySummaries.length > 0 ? cashMonthlySummaries[cashMonthlySummaries.length - 1] : null
 
   // ---- Per-bank-account breakdown ----
   const bankAccounts = {}
@@ -129,7 +129,7 @@ export default function Dashboard({ transactions, stats }) {
         </div>
       </div>
 
-      {/* Balance by Account Type */}
+      {/* Balance by Account Type — with monthly carry-forward */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Bank Balance Card */}
         <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-l-4 border-indigo-500">
@@ -141,9 +141,22 @@ export default function Dashboard({ transactions, stats }) {
               ₹{bankBalance.toLocaleString('en-IN')}
             </span>
           </div>
+          {/* Monthly carry-forward for Bank */}
+          {bankCurrentMonth && (
+            <div className="mt-2 space-y-1 border-t border-indigo-100 pt-3 text-xs">
+              <p className="text-gray-500 font-semibold mb-1">{monthLabel(bankCurrentMonth.month)}</p>
+              <div className="flex justify-between"><span className="text-gray-500">Opening (B/D)</span><span className="font-semibold text-gray-700">₹{bankCurrentMonth.opening.toLocaleString('en-IN')}</span></div>
+              <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{bankCurrentMonth.income.toLocaleString('en-IN')}</span></div>
+              <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{bankCurrentMonth.expense.toLocaleString('en-IN')}</span></div>
+              {bankCurrentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{bankCurrentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
+              {bankCurrentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{bankCurrentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
+              <div className="flex justify-between border-t border-indigo-200 pt-1 mt-1"><span className="text-gray-700 font-bold">Closing (C/F)</span><span className={`font-bold ${bankCurrentMonth.closing >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>₹{bankCurrentMonth.closing.toLocaleString('en-IN')}</span></div>
+            </div>
+          )}
           {/* Per-bank breakdown */}
           {Object.keys(bankAccounts).length > 0 && (
             <div className="mt-3 space-y-2 border-t border-indigo-100 pt-3">
+              <p className="text-xs text-gray-500 font-semibold">Per Account</p>
               {Object.entries(bankAccounts).map(([acc, bal]) => (
                 <div key={acc} className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">{acc}</span>
@@ -158,7 +171,7 @@ export default function Dashboard({ transactions, stats }) {
 
         {/* Cash Balance Card */}
         <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-l-4 border-emerald-500">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <p className="text-gray-700 text-sm font-semibold uppercase flex items-center gap-2">
               💵 Cash Balance
             </p>
@@ -166,6 +179,18 @@ export default function Dashboard({ transactions, stats }) {
               ₹{cashBalance.toLocaleString('en-IN')}
             </span>
           </div>
+          {/* Monthly carry-forward for Cash */}
+          {cashCurrentMonth && (
+            <div className="mt-2 space-y-1 border-t border-emerald-100 pt-3 text-xs">
+              <p className="text-gray-500 font-semibold mb-1">{monthLabel(cashCurrentMonth.month)}</p>
+              <div className="flex justify-between"><span className="text-gray-500">Opening (B/D)</span><span className="font-semibold text-gray-700">₹{cashCurrentMonth.opening.toLocaleString('en-IN')}</span></div>
+              <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{cashCurrentMonth.income.toLocaleString('en-IN')}</span></div>
+              <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{cashCurrentMonth.expense.toLocaleString('en-IN')}</span></div>
+              {cashCurrentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{cashCurrentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
+              {cashCurrentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{cashCurrentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
+              <div className="flex justify-between border-t border-emerald-200 pt-1 mt-1"><span className="text-gray-700 font-bold">Closing (C/F)</span><span className={`font-bold ${cashCurrentMonth.closing >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>₹{cashCurrentMonth.closing.toLocaleString('en-IN')}</span></div>
+            </div>
+          )}
         </div>
       </div>
 

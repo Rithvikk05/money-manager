@@ -7,6 +7,7 @@ import CalendarView from './components/CalendarView'
 import Statistics from './components/Statistics'
 import ImportExport from './components/ImportExport'
 import DeletedTransactions from './components/DeletedTransactions'
+import MonthlySummary from './components/MonthlySummary'
 import Auth from './components/Auth'
 
 const getApiBase = () => {
@@ -255,6 +256,16 @@ export default function App() {
             🗓️ Calendar
           </button>
           <button
+            onClick={() => setActiveTab('monthly-summary')}
+            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'monthly-summary'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-blue-600'
+            }`}
+          >
+            📈 Monthly Summary
+          </button>
+          <button
             onClick={() => setActiveTab('deleted')}
             className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
               activeTab === 'deleted'
@@ -299,6 +310,10 @@ export default function App() {
 
         {!loading && activeTab === 'calendar' && (
           <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} />
+        )}
+
+        {!loading && activeTab === 'monthly-summary' && (
+          <MonthlySummary transactions={transactions} />
         )}
 
         {!loading && activeTab === 'import-export' && (

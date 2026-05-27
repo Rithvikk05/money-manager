@@ -111,3 +111,78 @@ export function getMonthlyBalanceSummaries(transactions = [], orderedMonths) {
 
   return summaries
 }
+
+/**
+ * Compute monthly balance summaries for a specific account type (e.g. Bank or Cash).
+ * Like getMonthlyBalanceSummaries but filters by account and also tracks transfers.
+ * Explicit b/d and c/f entries scoped to the given account type are honoured.
+ *
+ * @param {Array} transactions - All transactions
+ * @param {Function} accountFilter - (account: string) => boolean
+ * @returns {Array} Monthly summaries with { month, opening, income, expense, transferIn, transferOut, closing }
+ */
+export function getAccountMonthlyBalanceSummaries(transactions = [], accountFilter) {
+  const monthMap = {}
+
+  for (const t of Array.isArray(transactions) ? transactions : []) {
+    if (!t || !t.date) continue
+    if (!accountFilter(t.account)) continue
+    const ym = toYearMonth(t.date)
+    if (!ym) continue
+    if (!Array.isArray(monthMap[ym])) monthMap[ym] = []
+    monthMap[ym].push(t)
+  }
+
+  const months = Object.keys(monthMap)
+  const summaries = []
+  let previousClosing = 0
+
+  for (const ym of [...months].sort()) {
+    const monthTxs = Array.isArray(monthMap[ym]) ? monthMap[ym] : []
+    let income = 0
+    let expense = 0
+    let transferIn = 0
+    let transferOut = 0
+    let opening = null
+    let closing = null
+
+    for (const t of monthTxs) {
+      const amount = Number(t.amount) || 0
+
+      if (isExplicitOpening(t)) {
+        opening = (opening || 0) + amount
+        continue
+      }
+
+      if (isExplicitClosing(t)) {
+        closing = (closing || 0) + amount
+        continue
+      }
+
+      const type = (t.type || '').toLowerCase()
+      if (type === 'income') income += amount
+      else if (type === 'expense') expense += amount
+      else if (type === 'transfer-in') transferIn += amount
+      else if (type === 'transfer-out') transferOut += amount
+    }
+
+    const resolvedOpening = opening !== null ? opening : previousClosing
+    const resolvedClosing = closing !== null
+      ? closing
+      : resolvedOpening + income - expense + transferIn - transferOut
+
+    summaries.push({
+      month: ym,
+      opening: resolvedOpening,
+      income,
+      expense,
+      transferIn,
+      transferOut,
+      closing: resolvedClosing,
+    })
+
+    previousClosing = resolvedClosing
+  }
+
+  return summaries
+}
