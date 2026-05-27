@@ -141,10 +141,15 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
               for (const transaction of txs.slice(0, 3)) {
                 nodes.push(
                   <div key={transaction.id} className="truncate">
-                    <span className={`mr-1 ${String(transaction.type || '').toLowerCase() === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`mr-1 ${
+                      transaction.isVirtual ? 'text-purple-500 font-bold italic' :
+                      String(transaction.type || '').toLowerCase() === 'income' ? 'text-green-600' : 'text-red-600'
+                    }`}>
                       ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                     </span>
-                    <span className="text-gray-700">{transaction.category || '—'}</span>
+                    <span className={`${transaction.isVirtual ? 'text-purple-400 italic' : 'text-gray-700'}`}>
+                      {transaction.isVirtual ? transaction.category : (transaction.category || '—')}
+                    </span>
                   </div>
                 )
               }
@@ -232,24 +237,26 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
             </div>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {selectedDayTransactions.map((transaction) => (
-                <div key={transaction.id} className="p-2 border rounded flex justify-between items-center">
+                <div key={transaction.id} className={`p-2 border rounded flex justify-between items-center ${transaction.isVirtual ? 'bg-purple-50 border-purple-200' : ''}`}>
                   <div>
-                    <div className="font-medium">
-                      {transaction.time && <span className="mr-2 text-xs text-gray-500 bg-gray-100 px-1 rounded">{transaction.time}</span>}
+                    <div className={`font-medium ${transaction.isVirtual ? 'text-purple-700 italic' : ''}`}>
+                      {transaction.time && <span className={`mr-2 text-xs px-1 rounded ${transaction.isVirtual ? 'bg-purple-200 text-purple-800' : 'bg-gray-100 text-gray-500'}`}>{transaction.time}</span>}
                       {transaction.note || transaction.category || '—'}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className={`text-sm ${transaction.isVirtual ? 'text-purple-600' : 'text-gray-600'}`}>
                       {transaction.category} • ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                     </div>
                   </div>
+                  {!transaction.isVirtual && (
                   <button
                     onClick={() => {
                       if (typeof onEdit === 'function') onEdit(transaction)
                     }}
                     className="px-3 py-1 bg-blue-500 text-white rounded"
                   >
-                    Edit
-                  </button>
+                      Edit
+                    </button>
+                  )}
                 </div>
               ))}
               {selectedDayTransactions.length === 0 && <div className="text-center text-gray-500 p-6">No transactions</div>}
