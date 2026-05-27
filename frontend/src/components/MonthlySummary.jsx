@@ -73,10 +73,10 @@ export default function MonthlySummary({ transactions }) {
             <thead className="bg-gradient-to-r from-blue-100 to-blue-50 border-b-2 border-blue-300">
               <tr>
                 <th className="px-6 py-3 text-left font-bold text-gray-700">Month</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Opening Balance</th>
+                <th className="px-6 py-3 text-right font-bold text-gray-700">Opening (B/D)</th>
                 <th className="px-6 py-3 text-right font-bold text-gray-700">Monthly Income</th>
                 <th className="px-6 py-3 text-right font-bold text-gray-700">Monthly Expenses</th>
-                <th className="px-6 py-3 text-right font-bold text-gray-700">Closing Balance</th>
+                <th className="px-6 py-3 text-right font-bold text-gray-700">Closing (C/F)</th>
               </tr>
             </thead>
             <tbody>

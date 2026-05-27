@@ -14,25 +14,33 @@ export async function exportToExcel(accountType, summaries, transactions) {
 
     if (accountType === 'all') {
       // Export all accounts
-      createSummarySheet(wb, 'Cash Summary', summaries.cash, transactions.filter((t) => t.account && t.account.toLowerCase().includes('cash')), XLSX)
-      createSummarySheet(wb, 'Bank Summary', summaries.bank, transactions.filter((t) => t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card'))), XLSX)
+      const cashTxs = transactions.filter((t) => t.account && t.account.toLowerCase().includes('cash'))
+      const bankTxs = transactions.filter((t) => t.account && (t.account.toLowerCase().includes('bank') || t.account.toLowerCase().includes('card')))
+      
       createDashboardSheet(wb, summaries.cash, summaries.bank, XLSX)
+      createTransactionSheet(wb, 'Cash Transactions', cashTxs, XLSX)
+      createTransactionSheet(wb, 'Bank Transactions', bankTxs, XLSX)
+      createSummarySheet(wb, 'Cash Summary', summaries.cash, cashTxs, XLSX)
+      createSummarySheet(wb, 'Bank Summary', summaries.bank, bankTxs, XLSX)
     } else if (accountType === 'cash') {
       createDashboardSheet(wb, summaries, [], XLSX)
+      createTransactionSheet(wb, 'Transactions', transactions, XLSX)
       createSummarySheet(wb, 'Monthly Summary', summaries, transactions, XLSX)
     } else if (accountType === 'bank') {
       createDashboardSheet(wb, [], summaries, XLSX)
+      createTransactionSheet(wb, 'Transactions', transactions, XLSX)
       createSummarySheet(wb, 'Monthly Summary', summaries, transactions, XLSX)
     }
 
     // Set column widths
     Object.values(wb.Sheets).forEach((sheet) => {
       sheet['!cols'] = [
-        { wch: 20 }, // Month
-        { wch: 18 }, // Opening/Total
-        { wch: 18 }, // Income
-        { wch: 18 }, // Expenses
-        { wch: 18 }, // Closing/Balance
+        { wch: 15 }, // Date
+        { wch: 20 }, // Account
+        { wch: 15 }, // Category
+        { wch: 15 }, // Type
+        { wch: 15 }, // Amount
+        { wch: 25 }, // Note/Description
       ]
     })
 
@@ -111,6 +119,90 @@ function createSummarySheet(wb, sheetName, summaries, transactions, XLSX) {
       }
     }
   }
+
+  XLSX.utils.book_append_sheet(wb, ws, sheetName)
+}
+
+/**
+ * Create a detailed transactions sheet
+ */
+function createTransactionSheet(wb, sheetName, transactions, XLSX) {
+  const formatDate = (dateStr) => {
+    try {
+      const date = new Date(dateStr)
+      if (Number.isNaN(date.getTime())) return dateStr
+      return date.toLocaleDateString('en-IN')
+    } catch {
+      return dateStr
+    }
+  }
+
+  const data = [
+    ['Transaction Details Report'],
+    ['Generated on:', new Date().toLocaleString('en-IN')],
+    [''],
+    ['Date', 'Account', 'Category', 'Type', 'Amount (₹)', 'Note/Description'],
+    ...transactions
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map((t) => [
+        formatDate(t.date),
+        t.account || '',
+        t.category || '',
+        t.type || '',
+        t.amount || 0,
+        t.note || t.description || '',
+      ]),
+  ]
+
+  const ws = XLSX.utils.aoa_to_sheet(data)
+
+  // Style header row (row 3)
+  for (let i = 0; i < 6; i++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 3, c: i })
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: 'FF4472C4' } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      }
+    }
+  }
+
+  // Format amount columns and alternate row colors
+  for (let row = 4; row < 4 + transactions.length; row++) {
+    // Amount formatting
+    const amountCellRef = XLSX.utils.encode_cell({ r: row, c: 4 })
+    if (ws[amountCellRef]) {
+      ws[amountCellRef].z = '#,##0.00'
+      ws[amountCellRef].s = {
+        alignment: { horizontal: 'right' },
+        ...(row % 2 === 0 && { fill: { fgColor: { rgb: 'FFF2F2F2' } } }),
+      }
+    }
+
+    // Alternate row background color
+    if (row % 2 === 0) {
+      for (let col = 0; col < 6; col++) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col })
+        if (ws[cellRef] && col !== 4) {
+          ws[cellRef].s = {
+            fill: { fgColor: { rgb: 'FFF2F2F2' } },
+            alignment: { horizontal: col === 4 ? 'right' : 'left' },
+          }
+        }
+      }
+    }
+  }
+
+  // Set proper column widths for transactions
+  ws['!cols'] = [
+    { wch: 15 }, // Date
+    { wch: 18 }, // Account
+    { wch: 16 }, // Category
+    { wch: 14 }, // Type
+    { wch: 16 }, // Amount
+    { wch: 30 }, // Note/Description
+  ]
 
   XLSX.utils.book_append_sheet(wb, ws, sheetName)
 }
