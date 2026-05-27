@@ -4,17 +4,16 @@ import {
   monthLabel,
   parseTransactionDate,
   toYearMonth,
-  injectVirtualCarryTransactions,
 } from '../utils/monthlyBalances'
 
-export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
+export default function CalendarView({ transactions = [], onEdit, onAddDate, onCalculateBalances }) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
   const [selectedDay, setSelectedDay] = useState(null)
 
-  const transactionList = Array.isArray(transactions) ? injectVirtualCarryTransactions(transactions) : []
+  const transactionList = Array.isArray(transactions) ? transactions : []
 
   const monthMap = useMemo(() => {
     const grouped = {}
@@ -169,10 +168,18 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">🗓️ Transactions Calendar</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="input-field">
             {monthOptions}
           </select>
+          {typeof onCalculateBalances === 'function' && (
+            <button
+              onClick={() => onCalculateBalances(selectedMonth)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-150 flex items-center gap-2"
+            >
+              🔄 Calculate & Update Balances
+            </button>
+          )}
         </div>
       </div>
 

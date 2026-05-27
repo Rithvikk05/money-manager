@@ -9,6 +9,12 @@ import ImportExport from './components/ImportExport'
 import DeletedTransactions from './components/DeletedTransactions'
 import MonthlySummary from './components/MonthlySummary'
 import Auth from './components/Auth'
+import {
+  toYearMonth,
+  isCarryTransaction,
+  monthLabel,
+  getAccountMonthlyBalanceSummaries,
+} from './utils/monthlyBalances'
 
 const getApiBase = () => {
   if (import.meta.env.DEV) return 'http://localhost:5000/api'
@@ -170,6 +176,115 @@ export default function App() {
     setActiveTab('add')
   }
 
+  const handleCalculateBalances = async (month) => {
+    setLoading(true)
+    try {
+      // 1. Identify existing carry transactions in the database for this month
+      const toDelete = transactions.filter(t => 
+        toYearMonth(t.date) === month && 
+        isCarryTransaction(t) && 
+        !t.isVirtual
+      )
+      
+      // 2. Delete them from the database
+      for (const t of toDelete) {
+        await axios.delete(`${API_BASE}/transactions/${t.id}`)
+      }
+      
+      // We need the updated list of transactions (without the deleted carry transactions)
+      // to calculate the correct balances.
+      const freshRes = await axios.get(`${API_BASE}/transactions`)
+      const freshTxs = freshRes.data
+      
+      // 3. Find all unique accounts in the database
+      const uniqueAccounts = [...new Set(freshTxs.map(t => t.account).filter(Boolean))]
+      
+      // 4. For each account, calculate B/D and C/D
+      const toAdd = []
+      const [yearStr, monthStr] = month.split('-')
+      const year = parseInt(yearStr, 10)
+      const monthNum = parseInt(monthStr, 10)
+      const lastDay = new Date(year, monthNum, 0).getDate()
+      const lastDayStr = String(lastDay).padStart(2, '0')
+      
+      for (const account of uniqueAccounts) {
+        // Calculate opening balance (closing of previous months)
+        const pastTxs = freshTxs.filter(t => 
+          t.account === account && 
+          toYearMonth(t.date) < month
+        )
+        const pastSummaries = getAccountMonthlyBalanceSummaries(pastTxs, a => a === account)
+        const openingBalance = pastSummaries.length > 0 ? pastSummaries[pastSummaries.length - 1].closing : 0
+        
+        // Calculate closing balance of the month
+        const monthTxs = freshTxs.filter(t => 
+          t.account === account && 
+          toYearMonth(t.date) === month &&
+          !isCarryTransaction(t)
+        )
+        
+        let income = 0
+        let expense = 0
+        let transferIn = 0
+        let transferOut = 0
+        
+        for (const t of monthTxs) {
+          const amount = Number(t.amount) || 0
+          const type = (t.type || '').toLowerCase()
+          if (type === 'income') income += amount
+          else if (type === 'expense') expense += amount
+          else if (type === 'transfer-in') transferIn += amount
+          else if (type === 'transfer-out') transferOut += amount
+        }
+        
+        const closingBalance = openingBalance + income - expense + transferIn - transferOut
+        
+        // Prepare B/D transaction if non-zero
+        if (openingBalance !== 0) {
+          toAdd.push({
+            date: `${month}-01`,
+            time: '00:00',
+            account,
+            category: 'Balance B/D',
+            note: 'Opening balance (B/D)',
+            amount: Math.abs(openingBalance),
+            type: openingBalance >= 0 ? 'Income' : 'Expense',
+            description: 'Auto-calculated opening balance carried forward.'
+          })
+        }
+        
+        // Prepare C/D transaction if non-zero
+        if (closingBalance !== 0) {
+          toAdd.push({
+            date: `${month}-${lastDayStr}`,
+            time: '23:59',
+            account,
+            category: 'Balance C/D',
+            note: 'Closing balance (C/D)',
+            amount: Math.abs(closingBalance),
+            type: closingBalance >= 0 ? 'Expense' : 'Income',
+            description: 'Auto-calculated closing balance to carry forward.'
+          })
+        }
+      }
+      
+      // 5. Post the new transactions
+      for (const tx of toAdd) {
+        await axios.post(`${API_BASE}/transactions`, tx)
+      }
+      
+      // 6. Refresh state
+      await fetchTransactions()
+      await fetchStats()
+      alert(`Successfully calculated and updated balances for ${monthLabel(month)}!`)
+    } catch (error) {
+      console.error('Error calculating balances:', error)
+      alert('Failed to calculate and update balances.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleImportSuccess = () => {
     fetchTransactions()
     fetchDeletedTransactions()
@@ -309,7 +424,7 @@ export default function App() {
         )}
 
         {!loading && activeTab === 'calendar' && (
-          <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} />
+          <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} onCalculateBalances={handleCalculateBalances} />
         )}
 
         {!loading && activeTab === 'monthly-summary' && (

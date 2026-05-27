@@ -43,7 +43,7 @@ export function isExplicitOpening(transaction = {}) {
 
 export function isExplicitClosing(transaction = {}) {
   const text = `${transaction.category || ''} ${transaction.note || ''} ${transaction.description || ''}`.toLowerCase()
-  return /\b(carried\s+forward|c\/f|balance\s+c|balance\s+carried)\b/.test(text)
+  return /\b(carried\s+forward|c\/f|c\/d|cd|balance\s+c|balance\s+carried)\b/.test(text)
 }
 
 export function isCarryTransaction(transaction = {}) {

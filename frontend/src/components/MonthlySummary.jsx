@@ -14,7 +14,7 @@ export default function MonthlySummary({ transactions }) {
 
   const bankSummaries = getAccountMonthlyBalanceSummaries(
     transactions,
-    (account) => account && (account.toLowerCase().includes('bank') || account.toLowerCase().includes('card'))
+    (account) => account && !account.toLowerCase().includes('cash')
   )
 
   const handleExportCash = async () => {

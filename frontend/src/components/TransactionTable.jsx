@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { injectVirtualCarryTransactions } from '../utils/monthlyBalances'
 
 export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const [searchTerm, setSearchTerm] = useState('')
@@ -108,7 +107,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const uniqueAccounts = ['All', ...new Set(transactions.map((t) => t.account).filter(Boolean))]
 
   // Inject virtual B/D and C/D transactions for display
-  const displayTransactions = injectVirtualCarryTransactions(transactions)
+  const displayTransactions = Array.isArray(transactions) ? transactions : []
 
   // Filter transactions
   let filtered = displayTransactions.filter((t) => {

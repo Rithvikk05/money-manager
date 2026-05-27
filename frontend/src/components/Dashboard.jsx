@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel, injectVirtualCarryTransactions } from '../utils/monthlyBalances'
+import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel } from '../utils/monthlyBalances'
 
 const formatDate = (dateString) => {
   try {
@@ -40,9 +40,7 @@ const formatDate = (dateString) => {
 // Determine if an account belongs to Bank (Card) or Cash
 const isBankAccount = (account) => {
   if (!account) return false
-  if (account === 'Cash') return false
-  // Bank accounts contain "Bank" or the bank emoji
-  return account.includes('Bank') || account.includes('🏦')
+  return !account.toLowerCase().includes('cash')
 }
 
 const isCashAccount = (account) => {
@@ -128,16 +126,10 @@ export default function Dashboard({ transactions, stats }) {
   }))
 
   const displayTransactions = useMemo(() => {
-    const sorted = [...transactions].sort((a, b) => {
+    return [...transactions].sort((a, b) => {
       const ta = new Date(b.date).getTime() || 0
       const tb = new Date(a.date).getTime() || 0
       return ta - tb
-    })
-    const virtualInjected = injectVirtualCarryTransactions(sorted)
-    return virtualInjected.sort((a, b) => {
-      const ta = new Date(a.date).getTime() || 0
-      const tb = new Date(b.date).getTime() || 0
-      return tb - ta
     })
   }, [transactions])
 
