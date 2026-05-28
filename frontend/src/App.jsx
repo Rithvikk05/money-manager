@@ -196,8 +196,9 @@ export default function App() {
       const freshRes = await axios.get(`${API_BASE}/transactions`)
       const freshTxs = freshRes.data
       
-      // 3. Find all unique accounts in the database
-      const uniqueAccounts = [...new Set(freshTxs.map(t => t.account).filter(Boolean))]
+      // 3. Group accounts for carry statements:
+      // Cash stays separate, all non-cash accounts are merged.
+      const accountGroups = ['Cash', 'Bank / Card / Account']
       
       // 4. For each account, calculate B/D and C/D
       const toAdd = []
@@ -207,18 +208,24 @@ export default function App() {
       const lastDay = new Date(year, monthNum, 0).getDate()
       const lastDayStr = String(lastDay).padStart(2, '0')
       
-      for (const account of uniqueAccounts) {
+      for (const account of accountGroups) {
+        const isCashGroup = account === 'Cash'
+        const isInGroup = (name = '') => {
+          const lower = String(name).toLowerCase()
+          return isCashGroup ? lower.includes('cash') : !lower.includes('cash')
+        }
+
         // Calculate opening balance (closing of previous months)
-        const pastTxs = freshTxs.filter(t => 
-          t.account === account && 
+        const pastTxs = freshTxs.filter(t =>
+          isInGroup(t.account) &&
           toYearMonth(t.date) < month
         )
-        const pastSummaries = getAccountMonthlyBalanceSummaries(pastTxs, a => a === account)
+        const pastSummaries = getAccountMonthlyBalanceSummaries(pastTxs, isInGroup)
         const openingBalance = pastSummaries.length > 0 ? pastSummaries[pastSummaries.length - 1].closing : 0
         
         // Calculate closing balance of the month
         const monthTxs = freshTxs.filter(t => 
-          t.account === account && 
+          isInGroup(t.account) && 
           toYearMonth(t.date) === month &&
           !isCarryTransaction(t)
         )
@@ -247,8 +254,8 @@ export default function App() {
             account,
             category: 'Balance B/D',
             note: 'Opening balance (B/D)',
-            amount: Math.abs(openingBalance),
-            type: openingBalance >= 0 ? 'Income' : 'Expense',
+            amount: openingBalance,
+            type: openingBalance >= 0 ? 'Balance-In' : 'Balance-Out',
             description: 'Auto-calculated opening balance carried forward.'
           })
         }
@@ -261,8 +268,8 @@ export default function App() {
             account,
             category: 'Balance C/D',
             note: 'Closing balance (C/D)',
-            amount: Math.abs(closingBalance),
-            type: closingBalance >= 0 ? 'Expense' : 'Income',
+            amount: closingBalance,
+            type: closingBalance >= 0 ? 'Balance-Out' : 'Balance-In',
             description: 'Auto-calculated closing balance to carry forward.'
           })
         }

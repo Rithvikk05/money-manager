@@ -38,12 +38,12 @@ export function monthLabel(ym) {
 
 export function isExplicitOpening(transaction = {}) {
   const text = `${transaction.category || ''} ${transaction.note || ''} ${transaction.description || ''}`.toLowerCase()
-  return /\b(brought\s+down|b\/d|balance\s+b|balance\s+brought)\b/.test(text)
+  return /\b(brought\s+down|b[\/.\-]?d|balance\s+b|balance\s+brought)\b/.test(text)
 }
 
 export function isExplicitClosing(transaction = {}) {
   const text = `${transaction.category || ''} ${transaction.note || ''} ${transaction.description || ''}`.toLowerCase()
-  return /\b(carried\s+forward|c\/f|c\/d|cd|balance\s+c|balance\s+carried)\b/.test(text)
+  return /\b(carried\s+(forward|down)|c[\/.\-]?(f|d)|balance\s+c|balance\s+carried)\b/.test(text)
 }
 
 export function isCarryTransaction(transaction = {}) {

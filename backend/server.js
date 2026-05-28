@@ -499,21 +499,25 @@ app.get('/api/transactions', verifyToken, async (req, res) => {
 app.post('/api/transactions', verifyToken, async (req, res) => {
   try {
     const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    const safeAmount = Number(amount) || 0;
+    const safeTx = {
+      date: String(date || ''),
+      time: String(time || ''),
+      account: String(account || ''),
+      category: String(category || ''),
+      subcategory: String(subcategory || ''),
+      note: String(note || ''),
+      amount: safeAmount,
+      inr: safeAmount,
+      currency: String(currency || 'INR'),
+      type: String(type || ''),
+      description: String(description || '')
+    };
     
     if (useMongo) {
       const newTx = new Transaction({
         userId: req.userId,
-        date,
-        account,
-        category,
-        subcategory: subcategory || '',
-        note: note || '',
-        amount,
-        inr: amount,
-        currency: currency || 'INR',
-        type,
-        description: description || '',
-        time: time || ''
+        ...safeTx
       });
       await newTx.save();
       res.json({ id: newTx._id, message: 'Transaction added successfully' });
@@ -522,7 +526,7 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
         db,
         `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [req.userId, date, account, category, subcategory, note, amount, amount, currency, type, description, time || '']
+        [req.userId, safeTx.date, safeTx.account, safeTx.category, safeTx.subcategory, safeTx.note, safeTx.amount, safeTx.inr, safeTx.currency, safeTx.type, safeTx.description, safeTx.time]
       );
       res.json({ id: lastId, message: 'Transaction added successfully' });
     }
@@ -536,11 +540,25 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
 app.put('/api/transactions/:id', verifyToken, async (req, res) => {
   try {
     const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    const safeAmount = Number(amount) || 0;
+    const safeTx = {
+      date: String(date || ''),
+      time: String(time || ''),
+      account: String(account || ''),
+      category: String(category || ''),
+      subcategory: String(subcategory || ''),
+      note: String(note || ''),
+      amount: safeAmount,
+      inr: safeAmount,
+      currency: String(currency || 'INR'),
+      type: String(type || ''),
+      description: String(description || '')
+    };
     
     if (useMongo) {
       const tx = await Transaction.findOneAndUpdate(
         { _id: req.params.id, userId: req.userId },
-        { date, time: time || '', account, category, subcategory: subcategory || '', note: note || '', amount, inr: amount, currency: currency || 'INR', type, description: description || '' }
+        safeTx
       );
       if (!tx) return res.status(404).json({ error: 'Transaction not found' });
       res.json({ message: 'Transaction updated successfully' });
@@ -550,7 +568,7 @@ app.put('/api/transactions/:id', verifyToken, async (req, res) => {
         `UPDATE transactions 
          SET date=?, time=?, account=?, category=?, subcategory=?, note=?, amount=?, inr=?, currency=?, type=?, description=?
          WHERE id=? AND user_id=?`,
-        [date, time || '', account, category, subcategory, note, amount, amount, currency, type, description, req.params.id, req.userId]
+        [safeTx.date, safeTx.time, safeTx.account, safeTx.category, safeTx.subcategory, safeTx.note, safeTx.amount, safeTx.inr, safeTx.currency, safeTx.type, safeTx.description, req.params.id, req.userId]
       );
       res.json({ message: 'Transaction updated successfully' });
     }
@@ -704,9 +722,26 @@ app.delete('/api/deleted-transactions/:id', verifyToken, async (req, res) => {
 // Get statistics (protected - per user)
 app.get('/api/statistics', verifyToken, async (req, res) => {
   try {
+    const carryRegex = /(brought\s+down|b[\/.\-]?d|balance\s+b|balance\s+brought|carried\s+(forward|down)|c[\/.\-]?(f|d)|balance\s+c|balance\s+carried)/i;
     if (useMongo) {
       const stats = await Transaction.aggregate([
         { $match: { userId: new mongoose.Types.ObjectId(req.userId) } },
+        {
+          $addFields: {
+            carryText: {
+              $toLower: {
+                $concat: [
+                  { $ifNull: ['$category', ''] },
+                  ' ',
+                  { $ifNull: ['$note', ''] },
+                  ' ',
+                  { $ifNull: ['$description', ''] }
+                ]
+              }
+            }
+          }
+        },
+        { $match: { carryText: { $not: carryRegex } } },
         {
           $group: {
             _id: { type: '$type', category: '$category' },
@@ -730,7 +765,17 @@ app.get('/api/statistics', verifyToken, async (req, res) => {
       const rows = await dbAll(
         db,
         `SELECT type, category, SUM(amount) as total, COUNT(*) as count
-         FROM transactions WHERE user_id = ?
+         FROM transactions
+         WHERE user_id = ?
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%brought down%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%b/d%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%b.d%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%balance b%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%carried forward%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%carried down%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%c/f%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%c/d%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%balance c%'
          GROUP BY type, category ORDER BY type DESC, total DESC`,
         [req.userId]
       );

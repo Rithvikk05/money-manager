@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getMonthlyBalanceSummaries, monthLabel, parseTransactionDate } from '../utils/monthlyBalances'
+import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, monthLabel, parseTransactionDate } from '../utils/monthlyBalances'
 
 const getApiBase = () => {
   if (import.meta.env.DEV) return 'http://localhost:5000/api'
@@ -20,7 +20,11 @@ const escapeHtml = (value) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const formatAmount = (value) => `₹${(Number(value) || 0).toLocaleString('en-IN')}`
+const formatAmount = (value) => {
+  const amount = Number(value) || 0
+  const abs = Math.abs(amount).toLocaleString('en-IN')
+  return amount < 0 ? `-₹${abs}` : `₹${abs}`
+}
 
 const formatDisplayDate = (value) => {
   const date = parseTransactionDate(value)
@@ -72,6 +76,12 @@ export default function ImportExport({ onImportSuccess }) {
       const response = await axios.get(`${API_BASE}/transactions`)
       const transactions = Array.isArray(response.data) ? response.data : []
       const monthlySummaries = getMonthlyBalanceSummaries(transactions)
+      const accountMonthlySummaries = Array.from(new Set(transactions.map((t) => t?.account).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b))
+        .map((account) => ({
+          account,
+          summaries: getAccountMonthlyBalanceSummaries(transactions, (name) => String(name) === String(account)),
+        }))
       const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
       const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
       const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
@@ -128,6 +138,7 @@ export default function ImportExport({ onImportSuccess }) {
             <table>
               <thead>
                 <tr>
+                  <th>Account</th>
                   <th>Month</th>
                   <th>Opening (B/D)</th>
                   <th>Total Income</th>
@@ -138,22 +149,25 @@ export default function ImportExport({ onImportSuccess }) {
               <tbody>
       `
 
-      monthlySummaries.forEach((summary) => {
-        html += `
-          <tr>
-            <td>${escapeHtml(monthLabel(summary.month))}</td>
-            <td>${formatAmount(summary.opening)}</td>
-            <td class="income">${formatAmount(summary.income)}</td>
-            <td class="expense">${formatAmount(summary.expense)}</td>
-            <td>${formatAmount(summary.closing)}</td>
-          </tr>
-        `
+      accountMonthlySummaries.forEach(({ account, summaries }) => {
+        summaries.forEach((summary, index) => {
+          html += `
+            <tr>
+              <td>${index === 0 ? escapeHtml(account) : ''}</td>
+              <td>${escapeHtml(monthLabel(summary.month))}</td>
+              <td>${formatAmount(summary.opening)}</td>
+              <td class="income">${formatAmount(summary.income)}</td>
+              <td class="expense">${formatAmount(summary.expense)}</td>
+              <td>${formatAmount(summary.closing)}</td>
+            </tr>
+          `
+        })
       })
 
-      if (monthlySummaries.length === 0) {
+      if (accountMonthlySummaries.length === 0) {
         html += `
           <tr>
-            <td colspan="5" style="text-align: center; color: #666;">No monthly summary available</td>
+            <td colspan="6" style="text-align: center; color: #666;">No monthly summary available</td>
           </tr>
         `
       }

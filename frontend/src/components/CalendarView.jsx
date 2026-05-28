@@ -1,12 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   getMonthlyBalanceSummaries,
+  getAccountMonthlyBalanceSummaries,
   monthLabel,
   parseTransactionDate,
   toYearMonth,
 } from '../utils/monthlyBalances'
 
 export default function CalendarView({ transactions = [], onEdit, onAddDate, onCalculateBalances }) {
+  const formatMoney = (amount) => {
+    const value = Number(amount) || 0
+    const abs = Math.abs(value).toLocaleString('en-IN')
+    return value < 0 ? `-₹${abs}` : `₹${abs}`
+  }
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -163,6 +169,17 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
 
   const selectedDayTransactions = selectedDay && Array.isArray(daysMap[selectedDay]) ? daysMap[selectedDay] : []
   const selectedMonthSummary = selectedMonth ? monthlyBalances[selectedMonth] : null
+  const selectedMonthAccountSummaries = useMemo(() => {
+    if (!selectedMonth) return []
+    const accounts = Array.from(new Set(transactionList.map((t) => t?.account).filter(Boolean))).sort((a, b) => a.localeCompare(b))
+    return accounts
+      .map((account) => {
+        const byMonth = getAccountMonthlyBalanceSummaries(transactionList, (name) => String(name) === String(account))
+        const summary = byMonth.find((item) => item.month === selectedMonth)
+        return summary ? { account, ...summary } : null
+      })
+      .filter(Boolean)
+  }, [selectedMonth, transactionList])
 
   return (
     <div className="space-y-6">
@@ -190,22 +207,35 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Opening (B/D)</span>
-                <strong>₹{(selectedMonthSummary?.opening || 0).toLocaleString('en-IN')}</strong>
+                <strong>{formatMoney(selectedMonthSummary?.opening || 0)}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Total Income</span>
-                <strong className="text-green-600">₹{(selectedMonthSummary?.income || 0).toLocaleString('en-IN')}</strong>
+                <strong className="text-green-600">{formatMoney(selectedMonthSummary?.income || 0)}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Total Expense</span>
-                <strong className="text-red-600">₹{(selectedMonthSummary?.expense || 0).toLocaleString('en-IN')}</strong>
+                <strong className="text-red-600">{formatMoney(selectedMonthSummary?.expense || 0)}</strong>
               </div>
               <div className="border-t pt-2 flex justify-between">
                 <span>Closing (C/F)</span>
-                <strong>₹{(selectedMonthSummary?.closing || 0).toLocaleString('en-IN')}</strong>
+                <strong>{formatMoney(selectedMonthSummary?.closing || 0)}</strong>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-3">Closing is carried forward to the next month as opening.</p>
+            {selectedMonthAccountSummaries.length > 0 && (
+              <div className="mt-4 border-t pt-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Account-wise</p>
+                <div className="space-y-1 text-sm">
+                  {selectedMonthAccountSummaries.map((item) => (
+                    <div key={item.account} className="flex justify-between gap-2">
+                      <span className="truncate">{item.account}</span>
+                      <strong className={item.closing >= 0 ? 'text-gray-700' : 'text-red-600'}>{formatMoney(item.closing)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card p-4 md:col-span-2">
