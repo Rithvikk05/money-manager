@@ -499,21 +499,25 @@ app.get('/api/transactions', verifyToken, async (req, res) => {
 app.post('/api/transactions', verifyToken, async (req, res) => {
   try {
     const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    const safeAmount = Number(amount) || 0;
+    const safeTx = {
+      date: String(date || ''),
+      time: String(time || ''),
+      account: String(account || ''),
+      category: String(category || ''),
+      subcategory: String(subcategory || ''),
+      note: String(note || ''),
+      amount: safeAmount,
+      inr: safeAmount,
+      currency: String(currency || 'INR'),
+      type: String(type || ''),
+      description: String(description || '')
+    };
     
     if (useMongo) {
       const newTx = new Transaction({
         userId: req.userId,
-        date,
-        account,
-        category,
-        subcategory: subcategory || '',
-        note: note || '',
-        amount,
-        inr: amount,
-        currency: currency || 'INR',
-        type,
-        description: description || '',
-        time: time || ''
+        ...safeTx
       });
       await newTx.save();
       res.json({ id: newTx._id, message: 'Transaction added successfully' });
@@ -522,7 +526,7 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
         db,
         `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [req.userId, date, account, category, subcategory, note, amount, amount, currency, type, description, time || '']
+        [req.userId, safeTx.date, safeTx.account, safeTx.category, safeTx.subcategory, safeTx.note, safeTx.amount, safeTx.inr, safeTx.currency, safeTx.type, safeTx.description, safeTx.time]
       );
       res.json({ id: lastId, message: 'Transaction added successfully' });
     }
@@ -536,11 +540,25 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
 app.put('/api/transactions/:id', verifyToken, async (req, res) => {
   try {
     const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
+    const safeAmount = Number(amount) || 0;
+    const safeTx = {
+      date: String(date || ''),
+      time: String(time || ''),
+      account: String(account || ''),
+      category: String(category || ''),
+      subcategory: String(subcategory || ''),
+      note: String(note || ''),
+      amount: safeAmount,
+      inr: safeAmount,
+      currency: String(currency || 'INR'),
+      type: String(type || ''),
+      description: String(description || '')
+    };
     
     if (useMongo) {
       const tx = await Transaction.findOneAndUpdate(
         { _id: req.params.id, userId: req.userId },
-        { date, time: time || '', account, category, subcategory: subcategory || '', note: note || '', amount, inr: amount, currency: currency || 'INR', type, description: description || '' }
+        safeTx
       );
       if (!tx) return res.status(404).json({ error: 'Transaction not found' });
       res.json({ message: 'Transaction updated successfully' });
@@ -550,7 +568,7 @@ app.put('/api/transactions/:id', verifyToken, async (req, res) => {
         `UPDATE transactions 
          SET date=?, time=?, account=?, category=?, subcategory=?, note=?, amount=?, inr=?, currency=?, type=?, description=?
          WHERE id=? AND user_id=?`,
-        [date, time || '', account, category, subcategory, note, amount, amount, currency, type, description, req.params.id, req.userId]
+        [safeTx.date, safeTx.time, safeTx.account, safeTx.category, safeTx.subcategory, safeTx.note, safeTx.amount, safeTx.inr, safeTx.currency, safeTx.type, safeTx.description, req.params.id, req.userId]
       );
       res.json({ message: 'Transaction updated successfully' });
     }
