@@ -1,5 +1,5 @@
 import { useEffect, useState, Fragment } from 'react'
-import { getUnifiedMonthlySummaries, monthLabel } from '../utils/monthlyBalances'
+import { getUnifiedMonthlySummaries, getAccountMonthlyBalanceSummaries, monthLabel } from '../utils/monthlyBalances'
 import { exportToExcel } from '../utils/excelExport'
 
 export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
@@ -12,6 +12,14 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
   }, [])
 
   const unifiedSummaries = getUnifiedMonthlySummaries(transactions)
+  const bankAccountSummaries = Array.from(new Set((transactions || [])
+    .map((t) => t?.account)
+    .filter((name) => name && !String(name).toLowerCase().includes('cash'))))
+    .sort((a, b) => a.localeCompare(b))
+    .map((account) => ({
+      account,
+      summaries: getAccountMonthlyBalanceSummaries(transactions, (name) => String(name) === String(account)),
+    }))
 
   const handleExportSummary = async () => {
     setExporting(true)
@@ -259,6 +267,40 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
           </div>
         )}
       </div>
+
+      {bankAccountSummaries.length > 0 && (
+        <div className="card overflow-hidden">
+          <h3 className="text-xl font-bold text-gray-800 px-6 py-4 border-b bg-gray-50">🏦 Bank/Card Monthly Summary (Account-wise)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gradient-to-r from-indigo-100 to-blue-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Account</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Month</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Opening (B/D)</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Income</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Expense</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Closing (C/F)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bankAccountSummaries.flatMap(({ account, summaries }) =>
+                  summaries.map((summary, index) => (
+                    <tr key={`${account}-${summary.month}`} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-800 font-semibold">{index === 0 ? account : ''}</td>
+                      <td className="px-4 py-3 text-gray-700">{monthLabel(summary.month)}</td>
+                      <td className="px-4 py-3 text-right text-blue-700">₹{(summary.opening || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3 text-right text-green-700">₹{(summary.income || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3 text-right text-red-700">₹{(summary.expense || 0).toLocaleString('en-IN')}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${(summary.closing || 0) >= 0 ? 'text-gray-800' : 'text-red-700'}`}>₹{(summary.closing || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

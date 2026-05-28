@@ -704,9 +704,26 @@ app.delete('/api/deleted-transactions/:id', verifyToken, async (req, res) => {
 // Get statistics (protected - per user)
 app.get('/api/statistics', verifyToken, async (req, res) => {
   try {
+    const carryRegex = /(brought\s+down|b[\/.\-]?d|balance\s+b|balance\s+brought|carried\s+(forward|down)|c[\/.\-]?(f|d)|balance\s+c|balance\s+carried)/i;
     if (useMongo) {
       const stats = await Transaction.aggregate([
         { $match: { userId: new mongoose.Types.ObjectId(req.userId) } },
+        {
+          $addFields: {
+            carryText: {
+              $toLower: {
+                $concat: [
+                  { $ifNull: ['$category', ''] },
+                  ' ',
+                  { $ifNull: ['$note', ''] },
+                  ' ',
+                  { $ifNull: ['$description', ''] }
+                ]
+              }
+            }
+          }
+        },
+        { $match: { carryText: { $not: carryRegex } } },
         {
           $group: {
             _id: { type: '$type', category: '$category' },
@@ -730,7 +747,17 @@ app.get('/api/statistics', verifyToken, async (req, res) => {
       const rows = await dbAll(
         db,
         `SELECT type, category, SUM(amount) as total, COUNT(*) as count
-         FROM transactions WHERE user_id = ?
+         FROM transactions
+         WHERE user_id = ?
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%brought down%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%b/d%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%b.d%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%balance b%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%carried forward%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%carried down%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%c/f%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%c/d%'
+           AND LOWER(COALESCE(category, '') || ' ' || COALESCE(note, '') || ' ' || COALESCE(description, '')) NOT LIKE '%balance c%'
          GROUP BY type, category ORDER BY type DESC, total DESC`,
         [req.userId]
       );
