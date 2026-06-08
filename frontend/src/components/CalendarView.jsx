@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   getMonthlyBalanceSummaries,
   getAccountMonthlyBalanceSummaries,
@@ -7,12 +7,15 @@ import {
   toYearMonth,
 } from '../utils/monthlyBalances'
 
+const NEARBY_MONTHS = 2 // Load current month ± 2 months for smoother experience
+
 export default function CalendarView({ transactions = [], onEdit, onAddDate, onCalculateBalances }) {
-  const formatMoney = (amount) => {
+  const formatMoney = useCallback((amount) => {
     const value = Number(amount) || 0
     const abs = Math.abs(value).toLocaleString('en-IN')
     return value < 0 ? `-₹${abs}` : `₹${abs}`
-  }
+  }, [])
+
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -27,7 +30,6 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
 
   const monthMap = useMemo(() => {
     const grouped = {}
-
     for (const transaction of transactionList) {
       if (!transaction || !transaction.date) continue
       const ym = toYearMonth(transaction.date)
@@ -35,7 +37,6 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
       if (!Array.isArray(grouped[ym])) grouped[ym] = []
       grouped[ym].push(transaction)
     }
-
     return grouped
   }, [transactionList])
 
@@ -48,9 +49,8 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
         years.add(date.getFullYear())
       }
     }
-
     const list = []
-    const sortedYears = Array.from(years).sort((a, b) => b - a) // descending years
+    const sortedYears = Array.from(years).sort((a, b) => b - a)
     for (const year of sortedYears) {
       for (let m = 12; m >= 1; m -= 1) {
         const mm = String(m).padStart(2, '0')
@@ -60,15 +60,37 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
     return list
   }, [transactionList])
 
+  // Get nearby months to load (current ± NEARBY_MONTHS)
+  const nearbyMonths = useMemo(() => {
+    if (!selectedMonth || monthsList.length === 0) return []
+    const currentIndex = monthsList.indexOf(selectedMonth)
+    if (currentIndex === -1) return [selectedMonth]
+    
+    const start = Math.max(0, currentIndex - NEARBY_MONTHS)
+    const end = Math.min(monthsList.length, currentIndex + NEARBY_MONTHS + 1)
+    return monthsList.slice(start, end)
+  }, [selectedMonth, monthsList])
+
+  // Optimize: Only calculate balances for selected month and nearby months
+  const monthlyBalances = useMemo(() => {
+    return getMonthlyBalanceSummaries(transactionList, nearbyMonths).reduce((result, summary) => {
+      result[summary.month] = summary
+      return result
+    }, {})
+  }, [transactionList, nearbyMonths])
+
   // Persist autoSync preference to localStorage
   useEffect(() => {
     localStorage.setItem('calendarAutoSync', JSON.stringify(autoSync))
   }, [autoSync])
 
-  // Auto-sync when month changes
+  // Auto-sync when month changes (with debounce to avoid rapid calls)
   useEffect(() => {
     if (autoSync && selectedMonth && typeof onCalculateBalances === 'function') {
-      onCalculateBalances(selectedMonth)
+      const timer = setTimeout(() => {
+        onCalculateBalances(selectedMonth)
+      }, 500)
+      return () => clearTimeout(timer)
     }
   }, [selectedMonth, autoSync, onCalculateBalances])
 
@@ -83,13 +105,6 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
       setSelectedMonth(monthsList[0])
     }
   }, [monthsList, selectedMonth])
-
-  const monthlyBalances = useMemo(() => {
-    return getMonthlyBalanceSummaries(transactionList, monthsList).reduce((result, summary) => {
-      result[summary.month] = summary
-      return result
-    }, {})
-  }, [monthsList, transactionList])
 
   const daysMap = useMemo(() => {
     const grouped = {}
@@ -185,16 +200,28 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
 
   const selectedDayTransactions = selectedDay && Array.isArray(daysMap[selectedDay]) ? daysMap[selectedDay] : []
   const selectedMonthSummary = selectedMonth ? monthlyBalances[selectedMonth] : null
+  
+  // Optimize: Only calculate account summaries for selected month, with lazy initialization
   const selectedMonthAccountSummaries = useMemo(() => {
     if (!selectedMonth) return []
+    
     const accounts = Array.from(new Set(transactionList.map((t) => t?.account).filter(Boolean))).sort((a, b) => a.localeCompare(b))
-    return accounts
-      .map((account) => {
-        const byMonth = getAccountMonthlyBalanceSummaries(transactionList, (name) => String(name) === String(account))
-        const summary = byMonth.find((item) => item.month === selectedMonth)
-        return summary ? { account, ...summary } : null
-      })
-      .filter(Boolean)
+    const summaries = []
+    
+    for (const account of accounts) {
+      // Only calculate for this specific account
+      const monthTxs = transactionList.filter(t => String(t?.account) === String(account))
+      if (monthTxs.length === 0) continue
+      
+      const byMonth = getAccountMonthlyBalanceSummaries(monthTxs, () => true)
+      const summary = byMonth.find((item) => item.month === selectedMonth)
+      
+      if (summary) {
+        summaries.push({ account, ...summary })
+      }
+    }
+    
+    return summaries
   }, [selectedMonth, transactionList])
 
   return (
