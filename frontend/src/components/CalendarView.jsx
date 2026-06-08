@@ -155,6 +155,31 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
     for (let day = 1; day <= daysInMonth; day += 1) {
       const txs = Array.isArray(daysMap[day]) ? daysMap[day] : []
       const preview = []
+      
+      // Calculate income and expense totals for the day
+      let dayIncome = 0
+      let dayExpense = 0
+      
+      for (const transaction of txs) {
+        const amount = Number(transaction.amount) || 0
+        const type = String(transaction.type || '').toLowerCase()
+        if (type === 'income' || type === 'transfer-in') {
+          dayIncome += amount
+        } else if (type === 'expense' || type === 'transfer-out') {
+          dayExpense += amount
+        }
+      }
+      
+      // Determine border color based on income/expense
+      let borderColor = 'border-gray-200'
+      if (dayIncome > 0 && dayExpense === 0) {
+        borderColor = 'border-green-500 border-2'
+      } else if (dayExpense > 0 && dayIncome === 0) {
+        borderColor = 'border-red-500 border-2'
+      } else if (dayIncome > 0 && dayExpense > 0) {
+        borderColor = 'border-blue-500 border-2'
+      }
+      
       for (const transaction of txs.slice(0, 3)) {
         preview.push(`${transaction.note || ''} ₹${transaction.amount || 0}`.trim())
       }
@@ -163,7 +188,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
       dayCells.push(
         <div
           key={day}
-          className="p-2 border rounded min-h-[64px] cursor-pointer"
+          className={`p-2 rounded min-h-[64px] cursor-pointer border transition-colors hover:bg-gray-50 ${borderColor}`}
           title={dayLabel}
           onClick={() => setSelectedDay(day)}
         >
@@ -179,7 +204,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                   <div key={transaction.id} className="truncate">
                     <span className={`mr-1 ${
                       transaction.isVirtual ? 'text-purple-500 font-bold italic' :
-                      String(transaction.type || '').toLowerCase() === 'income' ? 'text-green-600' : 'text-red-600'
+                      String(transaction.type || '').toLowerCase() === 'income' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
                     }`}>
                       ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                     </span>
@@ -336,29 +361,63 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
               </div>
             </div>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {selectedDayTransactions.map((transaction) => (
-                <div key={transaction.id} className={`p-2 border rounded flex justify-between items-center ${transaction.isVirtual ? 'bg-purple-50 border-purple-200' : ''}`}>
-                  <div>
-                    <div className={`font-medium ${transaction.isVirtual ? 'text-purple-700 italic' : ''}`}>
-                      {transaction.time && <span className={`mr-2 text-xs px-1 rounded ${transaction.isVirtual ? 'bg-purple-200 text-purple-800' : 'bg-gray-100 text-gray-500'}`}>{transaction.time}</span>}
-                      {transaction.note || transaction.category || '—'}
+              {selectedDayTransactions.map((transaction) => {
+                const isIncome = String(transaction.type || '').toLowerCase() === 'income' || String(transaction.type || '').toLowerCase() === 'transfer-in'
+                const isExpense = String(transaction.type || '').toLowerCase() === 'expense' || String(transaction.type || '').toLowerCase() === 'transfer-out'
+                
+                let cardBgColor = 'bg-gray-50 border-gray-200'
+                let badgeColor = 'bg-gray-100 text-gray-800'
+                
+                if (transaction.isVirtual) {
+                  cardBgColor = 'bg-purple-50 border-purple-200'
+                  badgeColor = 'bg-purple-200 text-purple-800'
+                } else if (isIncome) {
+                  cardBgColor = 'bg-green-50 border-green-300 border-l-4 border-l-green-500'
+                  badgeColor = 'bg-green-200 text-green-800'
+                } else if (isExpense) {
+                  cardBgColor = 'bg-red-50 border-red-300 border-l-4 border-l-red-500'
+                  badgeColor = 'bg-red-200 text-red-800'
+                }
+                
+                return (
+                  <div key={transaction.id} className={`p-3 border rounded-lg flex justify-between items-center transition-colors ${cardBgColor}`}>
+                    <div className="flex-1">
+                      <div className={`font-semibold flex items-center gap-2 ${transaction.isVirtual ? 'text-purple-700 italic' : isIncome ? 'text-green-700' : isExpense ? 'text-red-700' : 'text-gray-700'}`}>
+                        {transaction.time && <span className={`text-xs px-2 py-1 rounded font-medium ${badgeColor}`}>{transaction.time}</span>}
+                        <span>{transaction.note || transaction.category || '—'}</span>
+                      </div>
+                      <div className={`text-sm mt-1 ${transaction.isVirtual ? 'text-purple-600' : 'text-gray-600'}`}>
+                        {transaction.category} • {transaction.account || ''}
+                      </div>
                     </div>
-                    <div className={`text-sm ${transaction.isVirtual ? 'text-purple-600' : 'text-gray-600'}`}>
-                      {transaction.category} • ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
+                    <div className="flex items-center gap-3 ml-3">
+                      <div className="text-right">
+                        <div className={`text-lg font-bold ${isIncome ? 'text-green-600' : isExpense ? 'text-red-600' : 'text-gray-700'}`}>
+                          {isIncome ? '+' : isExpense ? '−' : ''}₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
+                        </div>
+                        <div className={`text-xs font-semibold px-2 py-1 rounded mt-1 ${
+                          transaction.isVirtual ? 'bg-purple-100 text-purple-800' :
+                          isIncome ? 'bg-green-100 text-green-800' :
+                          isExpense ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {transaction.isVirtual ? 'Auto' : isIncome ? 'Income' : isExpense ? 'Expense' : 'Transfer'}
+                        </div>
+                      </div>
+                      {!transaction.isVirtual && (
+                        <button
+                          onClick={() => {
+                            if (typeof onEdit === 'function') onEdit(transaction)
+                          }}
+                          className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors whitespace-nowrap"
+                        >
+                          ✏️ Edit
+                        </button>
+                      )}
                     </div>
                   </div>
-                  {!transaction.isVirtual && (
-                  <button
-                    onClick={() => {
-                      if (typeof onEdit === 'function') onEdit(transaction)
-                    }}
-                    className="px-3 py-1 bg-blue-500 text-white rounded"
-                  >
-                      Edit
-                    </button>
-                  )}
-                </div>
-              ))}
+                )
+              })}
               {selectedDayTransactions.length === 0 && <div className="text-center text-gray-500 p-6">No transactions</div>}
             </div>
           </div>

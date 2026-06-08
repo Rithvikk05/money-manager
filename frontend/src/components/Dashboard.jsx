@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel } from '../utils/monthlyBalances'
 
@@ -48,6 +48,9 @@ const isCashAccount = (account) => {
 }
 
 export default function Dashboard({ transactions, stats }) {
+  const [displayCount, setDisplayCount] = useState(10)
+  const dashboardRef = useRef(null)
+
   const monthlySummaries = useMemo(() => getMonthlyBalanceSummaries(transactions), [transactions])
 
   const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
@@ -104,26 +107,32 @@ export default function Dashboard({ transactions, stats }) {
     }
   })
 
-  // Category breakdown
-  const expenseByCategory = transactions
-    .filter((t) => t.type === 'Expense' && !isCarryTransaction(t))
-    .reduce((acc, t) => {
-      const cat = t.category || 'Other'
-      acc[cat] = (acc[cat] || 0) + (t.amount || 0)
-      return acc
-    }, {})
+  // Category breakdown - memoized for performance
+  const expenseByCategory = useMemo(() => {
+    return transactions
+      .filter((t) => t.type === 'Expense' && !isCarryTransaction(t))
+      .reduce((acc, t) => {
+        const cat = t.category || 'Other'
+        acc[cat] = (acc[cat] || 0) + (t.amount || 0)
+        return acc
+      }, {})
+  }, [transactions])
 
-  const categoryData = Object.entries(expenseByCategory).map(([name, value]) => ({
-    name,
-    value,
-  }))
+  const categoryData = useMemo(() => {
+    return Object.entries(expenseByCategory).map(([name, value]) => ({
+      name,
+      value,
+    }))
+  }, [expenseByCategory])
 
-  // Monthly breakdown
-  const monthlyArray = monthlySummaries.map(({ month, income, expense }) => ({
-    month,
-    income,
-    expense,
-  }))
+  // Monthly breakdown - memoized for performance
+  const monthlyArray = useMemo(() => {
+    return monthlySummaries.map(({ month, income, expense }) => ({
+      month,
+      income,
+      expense,
+    }))
+  }, [monthlySummaries])
 
   const displayTransactions = useMemo(() => {
     return [...transactions].sort((a, b) => {
@@ -201,15 +210,15 @@ export default function Dashboard({ transactions, stats }) {
         <div className="card">
           <h3 className="text-xl font-bold text-gray-800 mb-4">📈 Monthly Trend</h3>
           {monthlyArray.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={400}>
               <LineChart data={monthlyArray}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
                 <Legend />
-                <Line type="monotone" dataKey="income" stroke="#22c55e" name="Income" />
-                <Line type="monotone" dataKey="expense" stroke="#ef4444" name="Expense" />
+                <Line type="monotone" dataKey="income" stroke="#22c55e" name="Income" strokeWidth={2} />
+                <Line type="monotone" dataKey="expense" stroke="#ef4444" name="Expense" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -221,16 +230,26 @@ export default function Dashboard({ transactions, stats }) {
         <div className="card">
           <h3 className="text-xl font-bold text-gray-800 mb-4">🎯 Expenses by Category</h3>
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ₹${(value).toLocaleString('en-IN')}`} outerRadius={80} fill="#8884d8" dataKey="value">
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col items-center justify-center">
+              <ResponsiveContainer width="100%" height={500}>
+                <PieChart>
+                  <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ₹${(value).toLocaleString('en-IN')}`} outerRadius={120} innerRadius={40} fill="#8884d8" dataKey="value">
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                {categoryData.map((cat, idx) => (
+                  <div key={cat.name} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                    <span className="truncate">{cat.name}: ₹{cat.value.toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <p className="text-gray-500">No data available</p>
           )}
@@ -253,7 +272,7 @@ export default function Dashboard({ transactions, stats }) {
               </tr>
             </thead>
             <tbody>
-              {displayTransactions.slice(0, 10).map((t) => (
+              {displayTransactions.slice(0, displayCount).map((t) => (
                 <tr key={t.id} className={`border-b transition-colors ${t.isVirtual ? 'bg-gray-100 italic' : 'hover:bg-gray-50'}`}>
                   <td className="px-4 py-2 text-gray-700">{formatDate(t.date)}</td>
                   <td className="px-4 py-2 text-gray-600">{t.account}</td>
@@ -282,6 +301,16 @@ export default function Dashboard({ transactions, stats }) {
             </tbody>
           </table>
         </div>
+        {displayTransactions.length > displayCount && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => setDisplayCount(prev => Math.min(prev + 10, displayTransactions.length))}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+            >
+              Load More ({displayCount} of {displayTransactions.length})
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
