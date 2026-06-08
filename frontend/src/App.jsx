@@ -47,6 +47,7 @@ export default function App() {
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState(null)
   const [initialData, setInitialData] = useState(null)
+  const [editingInModal, setEditingInModal] = useState(false)
 
   useEffect(() => {
     // Check if user is already logged in
@@ -169,6 +170,35 @@ export default function App() {
     setActiveTab('add')
   }
 
+  const handleEditInModal = (transaction) => {
+    setEditingId(transaction.id)
+    setEditData(transaction)
+    setEditingInModal(true)
+  }
+
+  const handleCloseModal = () => {
+    setEditingInModal(false)
+    setEditingId(null)
+    setEditData(null)
+  }
+
+  const handleSaveFromModal = async (data) => {
+    try {
+      if (editingId) {
+        await axios.put(`${API_BASE}/transactions/${editingId}`, data)
+        setEditingId(null)
+        setEditData(null)
+      } else {
+        await axios.post(`${API_BASE}/transactions`, data)
+      }
+      fetchTransactions()
+      fetchStats()
+      handleCloseModal()
+    } catch (error) {
+      console.error('Error saving transaction:', error)
+    }
+  }
+
   const openAddWithDate = (isoDate) => {
     setEditingId(null)
     setEditData(null)
@@ -179,99 +209,118 @@ export default function App() {
   const handleCalculateBalances = async (month) => {
     setLoading(true)
     try {
-      // 1. Identify existing carry transactions in the database for this month
-      const toDelete = transactions.filter(t => 
-        toYearMonth(t.date) === month && 
-        isCarryTransaction(t) && 
-        !t.isVirtual
-      )
-      
-      // 2. Delete them from the database
-      for (const t of toDelete) {
-        await axios.delete(`${API_BASE}/transactions/${t.id}`)
-      }
-      
-      // We need the updated list of transactions (without the deleted carry transactions)
-      // to calculate the correct balances.
+      // Get all transactions fresh from database
       const freshRes = await axios.get(`${API_BASE}/transactions`)
       const freshTxs = freshRes.data
+
+      // Determine which months to process
+      let monthsToProcess = []
+      if (month === 'all') {
+        // Get all unique months from transactions
+        const uniqueMonths = new Set(freshTxs.map(t => toYearMonth(t.date)).filter(Boolean))
+        monthsToProcess = Array.from(uniqueMonths).sort()
+      } else {
+        monthsToProcess = [month]
+      }
+
+      // Process each month
+      for (const targetMonth of monthsToProcess) {
+        // 1. Identify existing carry transactions in the database for this month
+        const toDelete = freshTxs.filter(t => 
+          toYearMonth(t.date) === targetMonth && 
+          isCarryTransaction(t) && 
+          !t.isVirtual
+        )
+        
+        // 2. Delete them from the database
+        for (const t of toDelete) {
+          await axios.delete(`${API_BASE}/transactions/${t.id}`)
+        }
+      }
+
+      // Re-fetch after deleting old carry transactions
+      const refetchRes = await axios.get(`${API_BASE}/transactions`)
+      const allTxs = refetchRes.data
       
       // 3. Group accounts for carry statements:
       // Cash stays separate, all non-cash accounts are merged.
       const accountGroups = ['Cash', 'Bank / Card / Account']
       
-      // 4. For each account, calculate B/D and C/D
+      // 4. For each month and account, calculate B/D and C/D
       const toAdd = []
-      const [yearStr, monthStr] = month.split('-')
-      const year = parseInt(yearStr, 10)
-      const monthNum = parseInt(monthStr, 10)
-      const lastDay = new Date(year, monthNum, 0).getDate()
-      const lastDayStr = String(lastDay).padStart(2, '0')
-      
-      for (const account of accountGroups) {
-        const isCashGroup = account === 'Cash'
-        const isInGroup = (name = '') => {
-          const lower = String(name).toLowerCase()
-          return isCashGroup ? lower.includes('cash') : !lower.includes('cash')
-        }
 
-        // Calculate opening balance (closing of previous months)
-        const pastTxs = freshTxs.filter(t =>
-          isInGroup(t.account) &&
-          toYearMonth(t.date) < month
-        )
-        const pastSummaries = getAccountMonthlyBalanceSummaries(pastTxs, isInGroup)
-        const openingBalance = pastSummaries.length > 0 ? pastSummaries[pastSummaries.length - 1].closing : 0
+      for (const targetMonth of monthsToProcess) {
+        const [yearStr, monthStr] = targetMonth.split('-')
+        const year = parseInt(yearStr, 10)
+        const monthNum = parseInt(monthStr, 10)
+        const lastDay = new Date(year, monthNum, 0).getDate()
+        const lastDayStr = String(lastDay).padStart(2, '0')
         
-        // Calculate closing balance of the month
-        const monthTxs = freshTxs.filter(t => 
-          isInGroup(t.account) && 
-          toYearMonth(t.date) === month &&
-          !isCarryTransaction(t)
-        )
-        
-        let income = 0
-        let expense = 0
-        let transferIn = 0
-        let transferOut = 0
-        
-        for (const t of monthTxs) {
-          const amount = Number(t.amount) || 0
-          const type = (t.type || '').toLowerCase()
-          if (type === 'income') income += amount
-          else if (type === 'expense') expense += amount
-          else if (type === 'transfer-in') transferIn += amount
-          else if (type === 'transfer-out') transferOut += amount
-        }
-        
-        const closingBalance = openingBalance + income - expense + transferIn - transferOut
-        
-        // Prepare B/D transaction if non-zero
-        if (openingBalance !== 0) {
-          toAdd.push({
-            date: `${month}-01`,
-            time: '00:00',
-            account,
-            category: 'Balance B/D',
-            note: 'Opening balance (B/D)',
-            amount: openingBalance,
-            type: openingBalance >= 0 ? 'Balance-In' : 'Balance-Out',
-            description: 'Auto-calculated opening balance carried forward.'
-          })
-        }
-        
-        // Prepare C/D transaction if non-zero
-        if (closingBalance !== 0) {
-          toAdd.push({
-            date: `${month}-${lastDayStr}`,
-            time: '23:59',
-            account,
-            category: 'Balance C/D',
-            note: 'Closing balance (C/D)',
-            amount: closingBalance,
-            type: closingBalance >= 0 ? 'Balance-Out' : 'Balance-In',
-            description: 'Auto-calculated closing balance to carry forward.'
-          })
+        for (const account of accountGroups) {
+          const isCashGroup = account === 'Cash'
+          const isInGroup = (name = '') => {
+            const lower = String(name).toLowerCase()
+            return isCashGroup ? lower.includes('cash') : !lower.includes('cash')
+          }
+
+          // Calculate opening balance (closing of previous months)
+          const pastTxs = allTxs.filter(t =>
+            isInGroup(t.account) &&
+            toYearMonth(t.date) < targetMonth
+          )
+          const pastSummaries = getAccountMonthlyBalanceSummaries(pastTxs, isInGroup)
+          const openingBalance = pastSummaries.length > 0 ? pastSummaries[pastSummaries.length - 1].closing : 0
+          
+          // Calculate closing balance of the month
+          const monthTxs = allTxs.filter(t => 
+            isInGroup(t.account) && 
+            toYearMonth(t.date) === targetMonth &&
+            !isCarryTransaction(t)
+          )
+          
+          let income = 0
+          let expense = 0
+          let transferIn = 0
+          let transferOut = 0
+          
+          for (const t of monthTxs) {
+            const amount = Number(t.amount) || 0
+            const type = (t.type || '').toLowerCase()
+            if (type === 'income') income += amount
+            else if (type === 'expense') expense += amount
+            else if (type === 'transfer-in') transferIn += amount
+            else if (type === 'transfer-out') transferOut += amount
+          }
+          
+          const closingBalance = openingBalance + income - expense + transferIn - transferOut
+          
+          // Prepare B/D transaction if non-zero
+          if (openingBalance !== 0) {
+            toAdd.push({
+              date: `${targetMonth}-01`,
+              time: '00:00',
+              account,
+              category: 'Balance B/D',
+              note: 'Opening balance (B/D)',
+              amount: openingBalance,
+              type: openingBalance >= 0 ? 'Balance-In' : 'Balance-Out',
+              description: 'Auto-calculated opening balance carried forward.'
+            })
+          }
+          
+          // Prepare C/D transaction if non-zero
+          if (closingBalance !== 0) {
+            toAdd.push({
+              date: `${targetMonth}-${lastDayStr}`,
+              time: '23:59',
+              account,
+              category: 'Balance C/D',
+              note: 'Closing balance (C/D)',
+              amount: closingBalance,
+              type: closingBalance >= 0 ? 'Balance-Out' : 'Balance-In',
+              description: 'Auto-calculated closing balance to carry forward.'
+            })
+          }
         }
       }
       
@@ -283,7 +332,11 @@ export default function App() {
       // 6. Refresh state
       await fetchTransactions()
       await fetchStats()
-      alert(`Successfully calculated and updated balances for ${monthLabel(month)}!`)
+      
+      const message = month === 'all' 
+        ? `Successfully calculated and updated balances for all ${monthsToProcess.length} months!`
+        : `Successfully calculated and updated balances for ${monthLabel(month)}!`
+      alert(message)
     } catch (error) {
       console.error('Error calculating balances:', error)
       alert('Failed to calculate and update balances.')
@@ -426,7 +479,7 @@ export default function App() {
           <TransactionTable
             transactions={transactions}
             onDelete={handleDelete}
-            onEdit={handleEdit}
+            onEdit={handleEditInModal}
           />
         )}
 
@@ -454,6 +507,31 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Edit Modal */}
+      {editingInModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">✏️ Edit Transaction</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <TransactionForm
+                onSubmit={handleSaveFromModal}
+                editData={editData}
+                onDelete={handleDelete}
+                onCancel={handleCloseModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white mt-12 py-6">

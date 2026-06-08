@@ -18,6 +18,10 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
   const [selectedDay, setSelectedDay] = useState(null)
+  const [autoSync, setAutoSync] = useState(() => {
+    const saved = localStorage.getItem('calendarAutoSync')
+    return saved ? JSON.parse(saved) : false
+  })
 
   const transactionList = Array.isArray(transactions) ? transactions : []
 
@@ -55,6 +59,18 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
     }
     return list
   }, [transactionList])
+
+  // Persist autoSync preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendarAutoSync', JSON.stringify(autoSync))
+  }, [autoSync])
+
+  // Auto-sync when month changes
+  useEffect(() => {
+    if (autoSync && selectedMonth && typeof onCalculateBalances === 'function') {
+      onCalculateBalances(selectedMonth)
+    }
+  }, [selectedMonth, autoSync, onCalculateBalances])
 
   useEffect(() => {
     if (!selectedMonth && monthsList.length > 0) {
@@ -189,13 +205,33 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="input-field">
             {monthOptions}
           </select>
+          <button
+            onClick={() => setAutoSync(!autoSync)}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
+              autoSync
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            title={autoSync ? 'Auto sync is ON - balances will update when you change months' : 'Click to enable auto sync'}
+          >
+            {autoSync ? '✅ Auto Sync ON' : '⏸️ Auto Sync OFF'}
+          </button>
           {typeof onCalculateBalances === 'function' && (
-            <button
-              onClick={() => onCalculateBalances(selectedMonth)}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-150 flex items-center gap-2"
-            >
-              🔄 Calculate & Update Balances
-            </button>
+            <>
+              <button
+                onClick={() => onCalculateBalances(selectedMonth)}
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-150 flex items-center gap-2"
+              >
+                🔄 Calculate This Month
+              </button>
+              <button
+                onClick={() => onCalculateBalances('all')}
+                className="px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-150 flex items-center gap-2"
+                title="Calculate and update balances for all months"
+              >
+                🔄 Calculate All Months
+              </button>
+            </>
           )}
         </div>
       </div>
