@@ -77,129 +77,545 @@ export default function ImportExport({ onImportSuccess }) {
     try {
       const response = await axios.get(`${API_BASE}/transactions`)
       const transactions = Array.isArray(response.data) ? response.data : []
-      
+
       const workbook = new ExcelJS.Workbook()
-      workbook.creator = 'Money Manager'
-      
-      // Calculate metrics
+      workbook.creator = 'Money Manager Pro'
+      workbook.created = new Date()
+
+      // ── Compute all metrics ──
       const monthlySummaries = getMonthlyBalanceSummaries(transactions)
-      const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
-      const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
-      const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
+      const totalIncome = monthlySummaries.reduce((s, m) => s + m.income, 0)
+      const totalExpense = monthlySummaries.reduce((s, m) => s + m.expense, 0)
+      const netBalance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
+      const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome * 100).toFixed(1) : '0.0'
+      const txCount = transactions.filter(t => !t.isVirtual).length
 
-      // 1. Dashboard Sheet
-      const dashboard = workbook.addWorksheet('Dashboard', { properties: { tabColor: { argb: 'FF4F81BD' } } })
-      dashboard.views = [{ showGridLines: false }]
-      
-      // Title
-      dashboard.mergeCells('B2:H3')
-      const titleCell = dashboard.getCell('B2')
-      titleCell.value = 'Money Manager Pro Dashboard'
-      titleCell.font = { size: 24, bold: true, color: { argb: 'FF4F81BD' } }
-      titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+      // Per-account final balances
+      const uniqueAccounts = [...new Set(transactions.map(t => t.account).filter(Boolean))].sort()
+      const accountFinalBalances = uniqueAccounts.map(acc => {
+        const accSummaries = getAccountMonthlyBalanceSummaries(transactions, a => a === acc)
+        const last = accSummaries.length > 0 ? accSummaries[accSummaries.length - 1] : null
+        return { account: acc, balance: last ? last.closing : 0 }
+      })
 
-      // KPI Cards
-      const kpiRow = 6
-      
-      // Income KPI
-      dashboard.mergeCells(`B${kpiRow}:C${kpiRow+2}`)
-      const incomeCard = dashboard.getCell(`B${kpiRow}`)
-      incomeCard.value = `Total Income\n\n₹${totalIncome.toLocaleString('en-IN')}`
-      incomeCard.font = { size: 14, bold: true, color: { argb: 'FF00B050' } }
-      incomeCard.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-      
-      for(let r=0; r<=2; r++) {
-        for(let c=2; c<=3; c++) {
-          const cell = dashboard.getCell(kpiRow+r, c)
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } }
-          cell.border = { top: {style:'thin', color:{argb:'FF00B050'}}, left: {style:'thin', color:{argb:'FF00B050'}}, bottom: {style:'thin', color:{argb:'FF00B050'}}, right: {style:'thin', color:{argb:'FF00B050'}} }
-        }
-      }
-      
-      // Expense KPI
-      dashboard.mergeCells(`D${kpiRow}:E${kpiRow+2}`)
-      const expenseCard = dashboard.getCell(`D${kpiRow}`)
-      expenseCard.value = `Total Expense\n\n₹${totalExpense.toLocaleString('en-IN')}`
-      expenseCard.font = { size: 14, bold: true, color: { argb: 'FFFF0000' } }
-      expenseCard.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-      
-      for(let r=0; r<=2; r++) {
-        for(let c=4; c<=5; c++) {
-          const cell = dashboard.getCell(kpiRow+r, c)
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2DCDB' } }
-          cell.border = { top: {style:'thin', color:{argb:'FFFF0000'}}, left: {style:'thin', color:{argb:'FFFF0000'}}, bottom: {style:'thin', color:{argb:'FFFF0000'}}, right: {style:'thin', color:{argb:'FFFF0000'}} }
-        }
-      }
-      
-      // Balance KPI
-      dashboard.mergeCells(`F${kpiRow}:G${kpiRow+2}`)
-      const balanceCard = dashboard.getCell(`F${kpiRow}`)
-      balanceCard.value = `Net Balance\n\n₹${balance.toLocaleString('en-IN')}`
-      balanceCard.font = { size: 14, bold: true, color: { argb: 'FF0070C0' } }
-      balanceCard.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-      
-      for(let r=0; r<=2; r++) {
-        for(let c=6; c<=7; c++) {
-          const cell = dashboard.getCell(kpiRow+r, c)
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }
-          cell.border = { top: {style:'thin', color:{argb:'FF0070C0'}}, left: {style:'thin', color:{argb:'FF0070C0'}}, bottom: {style:'thin', color:{argb:'FF0070C0'}}, right: {style:'thin', color:{argb:'FF0070C0'}} }
-        }
-      }
-
-      // 2. Transactions Sheet
-      const sheet1 = workbook.addWorksheet('All Transactions', { properties: { tabColor: { argb: 'FF00B0F0' } } })
-      sheet1.columns = [
-        { header: 'Date', key: 'date', width: 15 },
-        { header: 'Account', key: 'account', width: 20 },
-        { header: 'Category', key: 'category', width: 20 },
-        { header: 'Note', key: 'note', width: 35 },
-        { header: 'Amount', key: 'amount', width: 15 },
-        { header: 'Type', key: 'type', width: 15 }
-      ]
-      
-      sheet1.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
-      sheet1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } }
-      
+      // Category breakdown (expenses only, sorted descending)
+      const catMap = {}
       transactions.forEach(t => {
-        const row = sheet1.addRow({
+        if ((t.type || '').toLowerCase() === 'expense' && t.category && !t.isVirtual) {
+          const cat = t.category
+          catMap[cat] = (catMap[cat] || 0) + (Number(t.amount) || 0)
+        }
+      })
+      const categoryData = Object.entries(catMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+
+      // Top 10 biggest single expenses
+      const topExpenses = transactions
+        .filter(t => (t.type || '').toLowerCase() === 'expense' && !t.isVirtual)
+        .sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0))
+        .slice(0, 10)
+
+      // ── Reusable style helpers ──
+      const DARK_BG = 'FF1B2A4A'
+      const ACCENT_BLUE = 'FF4A90D9'
+      const ACCENT_GREEN = 'FF27AE60'
+      const ACCENT_RED = 'FFE74C3C'
+      const ACCENT_GOLD = 'FFF39C12'
+      const LIGHT_BG = 'FFF8F9FA'
+      const WHITE = 'FFFFFFFF'
+      const DARK_TEXT = 'FF2C3E50'
+      const SUBTLE_TEXT = 'FF7F8C8D'
+      const BORDER_COLOR = 'FFE0E0E0'
+
+      const thinBorder = {
+        top: { style: 'thin', color: { argb: BORDER_COLOR } },
+        bottom: { style: 'thin', color: { argb: BORDER_COLOR } },
+        left: { style: 'thin', color: { argb: BORDER_COLOR } },
+        right: { style: 'thin', color: { argb: BORDER_COLOR } }
+      }
+
+      const sectionHeader = (ws, row, col, endCol, title) => {
+        ws.mergeCells(row, col, row, endCol)
+        const cell = ws.getCell(row, col)
+        cell.value = title
+        cell.font = { size: 13, bold: true, color: { argb: WHITE } }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK_BG } }
+        cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+        for (let c = col; c <= endCol; c++) {
+          const cl = ws.getCell(row, c)
+          cl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK_BG } }
+        }
+        ws.getRow(row).height = 30
+      }
+
+      const tableHeader = (ws, row, headers, startCol) => {
+        headers.forEach((h, i) => {
+          const cell = ws.getCell(row, startCol + i)
+          cell.value = h
+          cell.font = { size: 10, bold: true, color: { argb: WHITE } }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_BLUE } }
+          cell.alignment = { horizontal: i === 0 ? 'left' : 'center', vertical: 'middle', indent: i === 0 ? 1 : 0 }
+          cell.border = thinBorder
+        })
+        ws.getRow(row).height = 24
+      }
+
+      // ═══════════════════════════════════════
+      //  SHEET 1 — DASHBOARD
+      // ═══════════════════════════════════════
+      const dash = workbook.addWorksheet('📊 Dashboard', { properties: { tabColor: { argb: ACCENT_BLUE } } })
+      dash.views = [{ showGridLines: false, zoomScale: 90 }]
+
+      // Set column widths for dashboard
+      dash.getColumn(1).width = 3  // margin
+      dash.getColumn(2).width = 22
+      dash.getColumn(3).width = 18
+      dash.getColumn(4).width = 18
+      dash.getColumn(5).width = 18
+      dash.getColumn(6).width = 18
+      dash.getColumn(7).width = 18
+      dash.getColumn(8).width = 18
+      dash.getColumn(9).width = 3  // margin
+
+      // ── Header banner ──
+      for (let c = 2; c <= 8; c++) {
+        for (let r = 2; r <= 4; r++) {
+          const cell = dash.getCell(r, c)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK_BG } }
+        }
+      }
+      dash.mergeCells('B2:H2')
+      const titleCell = dash.getCell('B2')
+      titleCell.value = '💰 MONEY MANAGER PRO'
+      titleCell.font = { size: 22, bold: true, color: { argb: WHITE } }
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+      dash.getRow(2).height = 40
+
+      dash.mergeCells('B3:H3')
+      const subtitleCell = dash.getCell('B3')
+      subtitleCell.value = `Financial Dashboard  •  Generated ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      subtitleCell.font = { size: 11, italic: true, color: { argb: 'FFB0BEC5' } }
+      subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+      dash.mergeCells('B4:H4')
+      const periodCell = dash.getCell('B4')
+      const firstMonth = monthlySummaries.length > 0 ? monthLabel(monthlySummaries[0].month) : 'N/A'
+      const lastMonth = monthlySummaries.length > 0 ? monthLabel(monthlySummaries[monthlySummaries.length - 1].month) : 'N/A'
+      periodCell.value = `Period: ${firstMonth} — ${lastMonth}  |  ${txCount} Transactions`
+      periodCell.font = { size: 10, color: { argb: 'FF90A4AE' } }
+      periodCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+      // ── KPI Cards (Row 6-8) ──
+      const kpiRow = 6
+      const kpiDefs = [
+        { label: 'TOTAL INCOME', value: totalIncome, color: ACCENT_GREEN, bg: 'FFE8F5E9', icon: '📈', cols: [2, 3] },
+        { label: 'TOTAL EXPENSE', value: totalExpense, color: ACCENT_RED, bg: 'FFFFEBEE', icon: '📉', cols: [4, 5] },
+        { label: 'NET BALANCE', value: netBalance, color: ACCENT_BLUE, bg: 'FFE3F2FD', icon: '💎', cols: [6, 7] },
+      ]
+
+      kpiDefs.forEach(kpi => {
+        const [c1, c2] = kpi.cols
+        // Label row
+        dash.mergeCells(kpiRow, c1, kpiRow, c2)
+        const labelCell = dash.getCell(kpiRow, c1)
+        labelCell.value = `${kpi.icon}  ${kpi.label}`
+        labelCell.font = { size: 9, bold: true, color: { argb: SUBTLE_TEXT } }
+        labelCell.alignment = { horizontal: 'center', vertical: 'bottom' }
+
+        // Value row
+        dash.mergeCells(kpiRow + 1, c1, kpiRow + 1, c2)
+        const valCell = dash.getCell(kpiRow + 1, c1)
+        valCell.value = kpi.value
+        valCell.numFmt = '"₹"#,##0'
+        valCell.font = { size: 20, bold: true, color: { argb: kpi.color } }
+        valCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+        // Sub-info row
+        dash.mergeCells(kpiRow + 2, c1, kpiRow + 2, c2)
+
+        // Paint background and borders
+        for (let r = kpiRow; r <= kpiRow + 2; r++) {
+          for (let c = c1; c <= c2; c++) {
+            const cell = dash.getCell(r, c)
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: kpi.bg } }
+            cell.border = {
+              top: { style: r === kpiRow ? 'medium' : 'thin', color: { argb: kpi.color } },
+              bottom: { style: r === kpiRow + 2 ? 'medium' : 'thin', color: { argb: kpi.color } },
+              left: { style: c === c1 ? 'medium' : 'thin', color: { argb: kpi.color } },
+              right: { style: c === c2 ? 'medium' : 'thin', color: { argb: kpi.color } },
+            }
+          }
+        }
+      })
+      dash.getRow(kpiRow).height = 22
+      dash.getRow(kpiRow + 1).height = 38
+      dash.getRow(kpiRow + 2).height = 10
+
+      // Savings Rate badge in row 8 col H
+      const srCell = dash.getCell(kpiRow, 8)
+      srCell.value = 'SAVINGS'
+      srCell.font = { size: 8, bold: true, color: { argb: SUBTLE_TEXT } }
+      srCell.alignment = { horizontal: 'center', vertical: 'bottom' }
+      srCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } }
+      srCell.border = { top: { style: 'medium', color: { argb: ACCENT_GOLD } }, left: { style: 'medium', color: { argb: ACCENT_GOLD } }, right: { style: 'medium', color: { argb: ACCENT_GOLD } }, bottom: { style: 'thin', color: { argb: ACCENT_GOLD } } }
+
+      const srValCell = dash.getCell(kpiRow + 1, 8)
+      srValCell.value = `${savingsRate}%`
+      srValCell.font = { size: 18, bold: true, color: { argb: ACCENT_GOLD } }
+      srValCell.alignment = { horizontal: 'center', vertical: 'middle' }
+      srValCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } }
+      srValCell.border = { left: { style: 'medium', color: { argb: ACCENT_GOLD } }, right: { style: 'medium', color: { argb: ACCENT_GOLD } }, bottom: { style: 'thin', color: { argb: ACCENT_GOLD } } }
+
+      const srBottomCell = dash.getCell(kpiRow + 2, 8)
+      srBottomCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } }
+      srBottomCell.border = { left: { style: 'medium', color: { argb: ACCENT_GOLD } }, right: { style: 'medium', color: { argb: ACCENT_GOLD } }, bottom: { style: 'medium', color: { argb: ACCENT_GOLD } } }
+
+      // ── Account Balances Section (Row 11+) ──
+      let curRow = 11
+      sectionHeader(dash, curRow, 2, 5, '🏦  ACCOUNT BALANCES')
+      curRow++
+      tableHeader(dash, curRow, ['Account', 'Type', 'Current Balance', 'Status'], 2)
+      curRow++
+
+      accountFinalBalances.forEach((acc, idx) => {
+        const isCash = acc.account.toLowerCase().includes('cash')
+        const row = dash.getRow(curRow)
+        const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+
+        const nameCell = dash.getCell(curRow, 2)
+        nameCell.value = `  ${isCash ? '💵' : '🏦'}  ${acc.account}`
+        nameCell.font = { size: 10, bold: true, color: { argb: DARK_TEXT } }
+        nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        nameCell.border = thinBorder
+
+        const typeCell = dash.getCell(curRow, 3)
+        typeCell.value = isCash ? 'Cash' : 'Bank'
+        typeCell.font = { size: 10, color: { argb: SUBTLE_TEXT } }
+        typeCell.alignment = { horizontal: 'center' }
+        typeCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        typeCell.border = thinBorder
+
+        const balCell = dash.getCell(curRow, 4)
+        balCell.value = acc.balance
+        balCell.numFmt = '"₹"#,##0.00;[Red]"-₹"#,##0.00'
+        balCell.font = { size: 11, bold: true, color: { argb: acc.balance >= 0 ? ACCENT_GREEN : ACCENT_RED } }
+        balCell.alignment = { horizontal: 'center' }
+        balCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        balCell.border = thinBorder
+
+        const statusCell = dash.getCell(curRow, 5)
+        statusCell.value = acc.balance >= 0 ? '✅ Healthy' : '⚠️ Negative'
+        statusCell.font = { size: 10, color: { argb: acc.balance >= 0 ? ACCENT_GREEN : ACCENT_RED } }
+        statusCell.alignment = { horizontal: 'center' }
+        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        statusCell.border = thinBorder
+
+        row.height = 22
+        curRow++
+      })
+
+      // ── Category Breakdown Section (beside Account Balances) ──
+      let catRow = 11
+      sectionHeader(dash, catRow, 6, 8, '🎯  EXPENSE CATEGORIES')
+      catRow++
+      tableHeader(dash, catRow, ['Category', 'Amount', '% Share'], 6)
+      catRow++
+
+      categoryData.slice(0, 10).forEach((cat, idx) => {
+        const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+        const pct = totalExpense > 0 ? (cat.value / totalExpense * 100).toFixed(1) : '0.0'
+
+        const catNameCell = dash.getCell(catRow, 6)
+        catNameCell.value = `  ${cat.name}`
+        catNameCell.font = { size: 10, color: { argb: DARK_TEXT } }
+        catNameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        catNameCell.border = thinBorder
+
+        const catAmtCell = dash.getCell(catRow, 7)
+        catAmtCell.value = cat.value
+        catAmtCell.numFmt = '"₹"#,##0'
+        catAmtCell.font = { size: 10, bold: true, color: { argb: ACCENT_RED } }
+        catAmtCell.alignment = { horizontal: 'center' }
+        catAmtCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        catAmtCell.border = thinBorder
+
+        const catPctCell = dash.getCell(catRow, 8)
+        catPctCell.value = `${pct}%`
+        catPctCell.font = { size: 10, color: { argb: SUBTLE_TEXT } }
+        catPctCell.alignment = { horizontal: 'center' }
+        catPctCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+        catPctCell.border = thinBorder
+
+        dash.getRow(catRow).height = 22
+        catRow++
+      })
+
+      // ── Top Expenses Section ──
+      const topRow = Math.max(curRow, catRow) + 2
+      sectionHeader(dash, topRow, 2, 8, '🔝  TOP 10 BIGGEST EXPENSES')
+      let topDataRow = topRow + 1
+      tableHeader(dash, topDataRow, ['#', 'Date', 'Account', 'Category', 'Description', 'Amount', ''], 2)
+      topDataRow++
+
+      topExpenses.forEach((t, idx) => {
+        const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+        const cols = [
+          { val: idx + 1, fmt: null, align: 'center', fontColor: SUBTLE_TEXT, bold: false },
+          { val: formatDisplayDate(t.date), fmt: null, align: 'center', fontColor: DARK_TEXT, bold: false },
+          { val: t.account, fmt: null, align: 'center', fontColor: DARK_TEXT, bold: false },
+          { val: t.category, fmt: null, align: 'left', fontColor: DARK_TEXT, bold: false },
+          { val: t.note || t.description || '', fmt: null, align: 'left', fontColor: SUBTLE_TEXT, bold: false },
+          { val: Number(t.amount) || 0, fmt: '"₹"#,##0', align: 'center', fontColor: ACCENT_RED, bold: true },
+          { val: '', fmt: null, align: 'center', fontColor: SUBTLE_TEXT, bold: false },
+        ]
+        cols.forEach((col, ci) => {
+          const cell = dash.getCell(topDataRow, 2 + ci)
+          cell.value = col.val
+          if (col.fmt) cell.numFmt = col.fmt
+          cell.font = { size: 10, bold: col.bold, color: { argb: col.fontColor } }
+          cell.alignment = { horizontal: col.align, vertical: 'middle' }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+          cell.border = thinBorder
+        })
+        dash.getRow(topDataRow).height = 22
+        topDataRow++
+      })
+
+      // Footer
+      const footerRow = topDataRow + 2
+      dash.mergeCells(footerRow, 2, footerRow, 8)
+      const footerCell = dash.getCell(footerRow, 2)
+      footerCell.value = '© Money Manager Pro  •  Confidential  •  Auto-generated report'
+      footerCell.font = { size: 9, italic: true, color: { argb: 'FFB0BEC5' } }
+      footerCell.alignment = { horizontal: 'center' }
+
+      // Print setup
+      dash.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
+
+      // ═══════════════════════════════════════
+      //  SHEET 2 — MONTHLY TREND
+      // ═══════════════════════════════════════
+      const trend = workbook.addWorksheet('📈 Monthly Trend', { properties: { tabColor: { argb: ACCENT_GREEN } } })
+      trend.views = [{ showGridLines: false }]
+
+      trend.getColumn(1).width = 3
+      trend.getColumn(2).width = 22
+      trend.getColumn(3).width = 18
+      trend.getColumn(4).width = 18
+      trend.getColumn(5).width = 18
+      trend.getColumn(6).width = 18
+      trend.getColumn(7).width = 18
+
+      // Title
+      trend.mergeCells('B2:G2')
+      const trendTitle = trend.getCell('B2')
+      trendTitle.value = '📈 Monthly Performance Overview'
+      trendTitle.font = { size: 16, bold: true, color: { argb: DARK_TEXT } }
+      trendTitle.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+      trend.getRow(2).height = 35
+
+      // Headers
+      const tHeaders = ['Month', 'Opening (B/D)', 'Income', 'Expense', 'Net Change', 'Closing (C/F)']
+      tableHeader(trend, 4, tHeaders, 2)
+
+      monthlySummaries.forEach((m, idx) => {
+        const r = 5 + idx
+        const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+        const netChange = m.income - m.expense
+
+        const vals = [
+          { v: monthLabel(m.month), fmt: null, color: DARK_TEXT, bold: true },
+          { v: m.opening, fmt: '"₹"#,##0', color: ACCENT_BLUE, bold: false },
+          { v: m.income, fmt: '"₹"#,##0', color: ACCENT_GREEN, bold: false },
+          { v: m.expense, fmt: '"₹"#,##0', color: ACCENT_RED, bold: false },
+          { v: netChange, fmt: '"₹"#,##0;[Red]"-₹"#,##0', color: netChange >= 0 ? ACCENT_GREEN : ACCENT_RED, bold: true },
+          { v: m.closing, fmt: '"₹"#,##0', color: DARK_TEXT, bold: true },
+        ]
+
+        vals.forEach((col, ci) => {
+          const cell = trend.getCell(r, 2 + ci)
+          cell.value = col.v
+          if (col.fmt) cell.numFmt = col.fmt
+          cell.font = { size: 10, bold: col.bold, color: { argb: col.color } }
+          cell.alignment = { horizontal: ci === 0 ? 'left' : 'center', vertical: 'middle', indent: ci === 0 ? 1 : 0 }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+          cell.border = thinBorder
+        })
+        trend.getRow(r).height = 24
+      })
+
+      // Totals row
+      if (monthlySummaries.length > 0) {
+        const totRow = 5 + monthlySummaries.length
+        const totNetChange = totalIncome - totalExpense
+        const totVals = [
+          { v: 'GRAND TOTAL', fmt: null, color: WHITE, bold: true },
+          { v: '', fmt: null, color: WHITE, bold: false },
+          { v: totalIncome, fmt: '"₹"#,##0', color: WHITE, bold: true },
+          { v: totalExpense, fmt: '"₹"#,##0', color: WHITE, bold: true },
+          { v: totNetChange, fmt: '"₹"#,##0', color: WHITE, bold: true },
+          { v: netBalance, fmt: '"₹"#,##0', color: WHITE, bold: true },
+        ]
+        totVals.forEach((col, ci) => {
+          const cell = trend.getCell(totRow, 2 + ci)
+          cell.value = col.v
+          if (col.fmt) cell.numFmt = col.fmt
+          cell.font = { size: 11, bold: col.bold, color: { argb: col.color } }
+          cell.alignment = { horizontal: ci === 0 ? 'left' : 'center', vertical: 'middle', indent: ci === 0 ? 1 : 0 }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK_BG } }
+          cell.border = thinBorder
+        })
+        trend.getRow(totRow).height = 28
+      }
+
+      // AutoFilter on headers
+      trend.autoFilter = { from: { row: 4, column: 2 }, to: { row: 4 + monthlySummaries.length, column: 7 } }
+      trend.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
+
+      // ═══════════════════════════════════════
+      //  SHEET 3 — ALL TRANSACTIONS
+      // ═══════════════════════════════════════
+      const txSheet = workbook.addWorksheet('📋 Transactions', { properties: { tabColor: { argb: 'FF00B0F0' } } })
+      txSheet.views = [{ state: 'frozen', ySplit: 1 }]
+
+      txSheet.columns = [
+        { header: '#', key: 'sno', width: 6 },
+        { header: 'Date', key: 'date', width: 14 },
+        { header: 'Account', key: 'account', width: 18 },
+        { header: 'Category', key: 'category', width: 18 },
+        { header: 'Note', key: 'note', width: 35 },
+        { header: 'Amount (₹)', key: 'amount', width: 16 },
+        { header: 'Type', key: 'type', width: 12 },
+      ]
+
+      // Header styling
+      const txHeaderRow = txSheet.getRow(1)
+      txHeaderRow.font = { size: 10, bold: true, color: { argb: WHITE } }
+      txHeaderRow.height = 26
+      txHeaderRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK_BG } }
+        cell.alignment = { horizontal: 'center', vertical: 'middle' }
+        cell.border = thinBorder
+      })
+
+      // Data rows
+      transactions.filter(t => !t.isVirtual).forEach((t, idx) => {
+        const row = txSheet.addRow({
+          sno: idx + 1,
           date: formatDisplayDate(t.date),
           account: t.account,
           category: t.category,
-          note: t.note,
-          amount: t.amount,
-          type: t.type
+          note: t.note || '',
+          amount: Number(t.amount) || 0,
+          type: t.type,
         })
-        row.getCell('amount').numFmt = '"₹"#,##0.00;[Red]\-"₹"#,##0.00'
-        if (t.type === 'Income') row.getCell('type').font = { color: { argb: 'FF00B050' }, bold: true }
-        if (t.type === 'Expense') row.getCell('type').font = { color: { argb: 'FFFF0000' }, bold: true }
-      })
-      
-      // 3. Summary Sheet
-      const sheet2 = workbook.addWorksheet('Monthly Summary', { properties: { tabColor: { argb: 'FF92D050' } } })
-      
-      sheet2.columns = [
-        { header: 'Month', key: 'month', width: 20 },
-        { header: 'Income', key: 'income', width: 20 },
-        { header: 'Expense', key: 'expense', width: 20 },
-        { header: 'Closing Balance', key: 'closing', width: 20 }
-      ]
-      
-      sheet2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
-      sheet2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B050' } }
-      
-      monthlySummaries.forEach(m => {
-        const row = sheet2.addRow({
-          month: monthLabel(m.month),
-          income: m.income,
-          expense: m.expense,
-          closing: m.closing
+
+        const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+        row.eachCell((cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+          cell.border = thinBorder
+          cell.font = { size: 10, color: { argb: DARK_TEXT } }
+          cell.alignment = { vertical: 'middle' }
         })
-        row.getCell('income').numFmt = '"₹"#,##0.00'
-        row.getCell('expense').numFmt = '"₹"#,##0.00'
-        row.getCell('closing').numFmt = '"₹"#,##0.00'
-        row.getCell('closing').font = { bold: true }
+
+        row.getCell('sno').alignment = { horizontal: 'center', vertical: 'middle' }
+        row.getCell('date').alignment = { horizontal: 'center', vertical: 'middle' }
+        row.getCell('account').alignment = { horizontal: 'center', vertical: 'middle' }
+        row.getCell('amount').numFmt = '#,##0.00'
+        row.getCell('amount').alignment = { horizontal: 'right', vertical: 'middle' }
+        row.getCell('type').alignment = { horizontal: 'center', vertical: 'middle' }
+
+        const typeVal = (t.type || '').toLowerCase()
+        if (typeVal === 'income') {
+          row.getCell('type').font = { size: 10, bold: true, color: { argb: ACCENT_GREEN } }
+          row.getCell('amount').font = { size: 10, bold: true, color: { argb: ACCENT_GREEN } }
+        } else if (typeVal === 'expense') {
+          row.getCell('type').font = { size: 10, bold: true, color: { argb: ACCENT_RED } }
+          row.getCell('amount').font = { size: 10, bold: true, color: { argb: ACCENT_RED } }
+        }
+
+        row.height = 20
       })
 
+      // AutoFilter and freeze
+      if (txCount > 0) {
+        txSheet.autoFilter = { from: 'A1', to: `G${txCount + 1}` }
+      }
+      txSheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
+
+      // ═══════════════════════════════════════
+      //  SHEET 4 — ACCOUNT WISE BREAKDOWN
+      // ═══════════════════════════════════════
+      const accSheet = workbook.addWorksheet('🏦 Account Wise', { properties: { tabColor: { argb: ACCENT_GOLD } } })
+      accSheet.views = [{ showGridLines: false }]
+
+      accSheet.getColumn(1).width = 3
+      accSheet.getColumn(2).width = 22
+      accSheet.getColumn(3).width = 18
+      accSheet.getColumn(4).width = 18
+      accSheet.getColumn(5).width = 18
+      accSheet.getColumn(6).width = 18
+      accSheet.getColumn(7).width = 18
+
+      let accRow = 2
+      uniqueAccounts.forEach(accName => {
+        const accSummaries = getAccountMonthlyBalanceSummaries(transactions, a => a === accName)
+        if (accSummaries.length === 0) return
+
+        // Account title
+        const isCash = accName.toLowerCase().includes('cash')
+        accSheet.mergeCells(accRow, 2, accRow, 7)
+        const accTitleCell = accSheet.getCell(accRow, 2)
+        accTitleCell.value = `${isCash ? '💵' : '🏦'}  ${accName}`
+        accTitleCell.font = { size: 14, bold: true, color: { argb: WHITE } }
+        accTitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isCash ? ACCENT_GREEN : ACCENT_BLUE } }
+        accTitleCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+        for (let c = 2; c <= 7; c++) {
+          dash.getCell(accRow, c)
+          accSheet.getCell(accRow, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isCash ? ACCENT_GREEN : ACCENT_BLUE } }
+        }
+        accSheet.getRow(accRow).height = 30
+        accRow++
+
+        // Headers
+        tableHeader(accSheet, accRow, ['Month', 'Opening', 'Income', 'Expense', 'Transfers', 'Closing'], 2)
+        accRow++
+
+        accSummaries.forEach((s, idx) => {
+          const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+          const netTransfer = (s.transferIn || 0) - (s.transferOut || 0)
+
+          const vals = [
+            { v: monthLabel(s.month), fmt: null, color: DARK_TEXT, bold: false },
+            { v: s.opening, fmt: '"₹"#,##0', color: ACCENT_BLUE, bold: false },
+            { v: s.income, fmt: '"₹"#,##0', color: ACCENT_GREEN, bold: false },
+            { v: s.expense, fmt: '"₹"#,##0', color: ACCENT_RED, bold: false },
+            { v: netTransfer, fmt: '"₹"#,##0;"-₹"#,##0', color: netTransfer >= 0 ? ACCENT_GREEN : ACCENT_RED, bold: false },
+            { v: s.closing, fmt: '"₹"#,##0;[Red]"-₹"#,##0', color: DARK_TEXT, bold: true },
+          ]
+
+          vals.forEach((col, ci) => {
+            const cell = accSheet.getCell(accRow, 2 + ci)
+            cell.value = col.v
+            if (col.fmt) cell.numFmt = col.fmt
+            cell.font = { size: 10, bold: col.bold, color: { argb: col.color } }
+            cell.alignment = { horizontal: ci === 0 ? 'left' : 'center', vertical: 'middle', indent: ci === 0 ? 1 : 0 }
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } }
+            cell.border = thinBorder
+          })
+          accSheet.getRow(accRow).height = 22
+          accRow++
+        })
+
+        accRow += 2 // gap between accounts
+      })
+
+      accSheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
+
+      // ═══════════════════════════════════════
+      //  GENERATE FILE
+      // ═══════════════════════════════════════
       const buffer = await workbook.xlsx.writeBuffer()
       saveAs(new Blob([buffer]), `money_manager_dashboard_${new Date().toISOString().split('T')[0]}.xlsx`)
       alert('✅ Professional Dashboard Excel exported successfully!')
