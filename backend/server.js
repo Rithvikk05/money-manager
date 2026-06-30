@@ -635,6 +635,108 @@ app.put('/api/transactions/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Bulk create transactions
+app.post('/api/transactions/bulk-create', verifyToken, async (req, res) => {
+  try {
+    const { transactions } = req.body;
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return res.status(400).json({ error: 'Expected array of transactions' });
+    }
+    
+    if (useMongo) {
+      const txs = transactions.map(tx => ({
+        userId: req.userId,
+        date: String(tx.date || ''),
+        time: String(tx.time || ''),
+        account: String(tx.account || ''),
+        category: String(tx.category || ''),
+        subcategory: String(tx.subcategory || ''),
+        note: String(tx.note || ''),
+        amount: Number(tx.amount) || 0,
+        inr: Number(tx.amount) || 0,
+        currency: String(tx.currency || 'INR'),
+        type: String(tx.type || ''),
+        description: String(tx.description || '')
+      }));
+      await Transaction.insertMany(txs);
+      res.json({ message: 'Transactions added successfully' });
+    } else {
+      await dbRun(db, 'BEGIN TRANSACTION');
+      for (const tx of transactions) {
+        await dbRun(
+          db,
+          `INSERT INTO transactions (user_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [req.userId, tx.date||'', tx.account||'', tx.category||'', tx.subcategory||'', tx.note||'', Number(tx.amount)||0, Number(tx.amount)||0, tx.currency||'INR', tx.type||'', tx.description||'', tx.time||'']
+        );
+      }
+      await dbRun(db, 'COMMIT');
+      res.json({ message: 'Transactions added successfully' });
+    }
+  } catch (err) {
+    if (!useMongo) await dbRun(db, 'ROLLBACK').catch(() => {});
+    console.error('Error adding bulk transactions:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk delete transactions
+app.post('/api/transactions/bulk-delete', verifyToken, async (req, res) => {
+  try {
+    const { transactionIds, hardDelete } = req.body;
+    if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
+      return res.status(400).json({ error: 'Expected array of transaction IDs' });
+    }
+
+    if (useMongo) {
+      if (hardDelete) {
+         await Transaction.deleteMany({ _id: { $in: transactionIds }, userId: req.userId });
+      } else {
+         const txs = await Transaction.find({ _id: { $in: transactionIds }, userId: req.userId });
+         if (txs.length > 0) {
+           const deletedTxs = txs.map(tx => ({
+             userId: req.userId,
+             transactionId: tx._id,
+             date: tx.date,
+             account: tx.account,
+             category: tx.category,
+             subcategory: tx.subcategory,
+             note: tx.note,
+             amount: tx.amount,
+             inr: tx.inr,
+             currency: tx.currency,
+             type: tx.type,
+             description: tx.description,
+             time: tx.time,
+             original_created_at: tx.created_at
+           }));
+           await DeletedTransaction.insertMany(deletedTxs);
+         }
+         await Transaction.deleteMany({ _id: { $in: transactionIds }, userId: req.userId });
+      }
+      res.json({ message: 'Transactions deleted successfully' });
+    } else {
+      await dbRun(db, 'BEGIN TRANSACTION');
+      const placeholders = transactionIds.map(() => '?').join(',');
+      
+      if (!hardDelete) {
+        const rows = await dbAll(db, `SELECT * FROM transactions WHERE id IN (${placeholders}) AND user_id=?`, [...transactionIds, req.userId]);
+        for (const tx of rows) {
+          await dbRun(db, `INSERT INTO deleted_transactions (user_id, transaction_id, date, account, category, subcategory, note, amount, inr, currency, type, description, time, original_created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tx.user_id, tx.id, tx.date, tx.account, tx.category, tx.subcategory, tx.note, tx.amount, tx.inr, tx.currency, tx.type, tx.description, tx.time, tx.created_at]);
+        }
+      }
+      await dbRun(db, `DELETE FROM transactions WHERE id IN (${placeholders}) AND user_id=?`, [...transactionIds, req.userId]);
+      await dbRun(db, 'COMMIT');
+      res.json({ message: 'Transactions deleted successfully' });
+    }
+  } catch (err) {
+    if (!useMongo) await dbRun(db, 'ROLLBACK').catch(() => {});
+    console.error('Error deleting bulk transactions:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Delete transaction (protected - per user) - soft delete
 app.delete('/api/transactions/:id', verifyToken, async (req, res) => {
   try {

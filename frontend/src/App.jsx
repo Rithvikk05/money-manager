@@ -249,6 +249,7 @@ export default function App() {
       }
 
       // Process each month
+      const toDeleteIds = []
       for (const targetMonth of monthsToProcess) {
         // 1. Identify existing carry transactions in the database for this month
         const toDelete = freshTxs.filter(t => 
@@ -256,11 +257,15 @@ export default function App() {
           isCarryTransaction(t) && 
           !t.isVirtual
         )
-        
-        // 2. Delete them from the database
-        for (const t of toDelete) {
-          await axios.delete(`${API_BASE}/transactions/${t.id}`)
-        }
+        toDeleteIds.push(...toDelete.map(t => t.id))
+      }
+
+      // 2. Delete them from the database in bulk (hard delete for carry transactions)
+      if (toDeleteIds.length > 0) {
+        await axios.post(`${API_BASE}/transactions/bulk-delete`, {
+          transactionIds: toDeleteIds,
+          hardDelete: true
+        })
       }
 
       // Re-fetch after deleting old carry transactions
@@ -344,9 +349,9 @@ export default function App() {
         }
       }
       
-      // 5. Post the new transactions
-      for (const tx of toAdd) {
-        await axios.post(`${API_BASE}/transactions`, tx)
+      // 5. Post the new transactions in bulk
+      if (toAdd.length > 0) {
+        await axios.post(`${API_BASE}/transactions/bulk-create`, { transactions: toAdd })
       }
       
       // 6. Refresh state
