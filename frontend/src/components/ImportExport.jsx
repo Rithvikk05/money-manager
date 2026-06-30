@@ -201,7 +201,7 @@ export default function ImportExport({ onImportSuccess }) {
       })
 
       const buffer = await workbook.xlsx.writeBuffer()
-      saveAs(new Blob([buffer]), \`money_manager_dashboard_\${new Date().toISOString().split('T')[0]}.xlsx\`)
+      saveAs(new Blob([buffer]), `money_manager_dashboard_${new Date().toISOString().split('T')[0]}.xlsx`)
       alert('✅ Professional Dashboard Excel exported successfully!')
     } catch (error) {
       console.error(error)
