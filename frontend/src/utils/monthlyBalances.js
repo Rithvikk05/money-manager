@@ -258,20 +258,52 @@ export function injectVirtualCarryTransactions(transactions = []) {
   return result
 }
 
-/**
- * Computes a unified monthly summary where Cash, Bank & Card, and Total are computed
- * for every active month. For months where one type has no transactions, the closing
- * balance is carried forward as the opening balance.
- *
- * @param {Array} transactions - All transactions
- * @returns {Array} Unified summaries with { month, cash, bank, total }
- */
 export function getUnifiedMonthlySummaries(transactions = []) {
-  const cashFilter = (account) => account && account.toLowerCase().includes('cash')
-  const bankFilter = (account) => account && !account.toLowerCase().includes('cash')
+  const uniqueAccounts = [...new Set((transactions || []).map(t => t.account).filter(Boolean))]
+  
+  const cashAccounts = uniqueAccounts.filter(acc => acc.toLowerCase().includes('cash'))
+  const bankAccounts = uniqueAccounts.filter(acc => !acc.toLowerCase().includes('cash'))
 
-  const cashRaw = getAccountMonthlyBalanceSummaries(transactions, cashFilter)
-  const bankRaw = getAccountMonthlyBalanceSummaries(transactions, bankFilter)
+  const getGroupedSummary = (accounts) => {
+    const allSummaries = accounts.map(acc => getAccountMonthlyBalanceSummaries(transactions, a => a === acc))
+    const monthSet = new Set()
+    allSummaries.forEach(list => list.forEach(s => monthSet.add(s.month)))
+    const months = Array.from(monthSet).sort()
+    
+    const result = []
+    for (const ym of months) {
+      let opening = 0
+      let income = 0
+      let expense = 0
+      let transferIn = 0
+      let transferOut = 0
+      let closing = 0
+
+      for (const accSummaryList of allSummaries) {
+        const accMonth = accSummaryList.find(s => s.month === ym)
+        if (accMonth) {
+          opening += accMonth.opening
+          income += accMonth.income
+          expense += accMonth.expense
+          transferIn += accMonth.transferIn
+          transferOut += accMonth.transferOut
+          closing += accMonth.closing
+        } else {
+          const pastMonths = accSummaryList.filter(s => s.month <= ym)
+          if (pastMonths.length > 0) {
+            const last = pastMonths[pastMonths.length - 1]
+            opening += last.closing
+            closing += last.closing
+          }
+        }
+      }
+      result.push({ month: ym, opening, income, expense, transferIn, transferOut, closing })
+    }
+    return result
+  }
+
+  const cashRaw = getGroupedSummary(cashAccounts)
+  const bankRaw = getGroupedSummary(bankAccounts)
 
   // Collect all unique months from both lists
   const allMonths = Array.from(new Set([
@@ -334,3 +366,4 @@ export function getUnifiedMonthlySummaries(transactions = []) {
 
   return unified
 }
+

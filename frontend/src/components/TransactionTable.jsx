@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 
 const ITEMS_PER_PAGE = 50
 
-export default function TransactionTable({ transactions, onDelete, onEdit }) {
+export default function TransactionTable({ transactions, onDelete, onEdit, onBulkEdit }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterType, setFilterType] = useState('All')
@@ -10,6 +10,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
   const [filterAccountType, setFilterAccountType] = useState('All')
   const [sortBy, setSortBy] = useState('date-desc')
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState(new Set())
   const searchTimeout = useRef(null)
 
   // Debounce search input to reduce filtering frequency
@@ -136,6 +137,32 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const newSelected = new Set(selectedIds)
+      paginatedData.forEach(t => {
+        if (!t.isVirtual) newSelected.add(t.id)
+      })
+      setSelectedIds(newSelected)
+    } else {
+      const newSelected = new Set(selectedIds)
+      paginatedData.forEach(t => newSelected.delete(t.id))
+      setSelectedIds(newSelected)
+    }
+  }
+
+  const handleSelectOne = (e, id) => {
+    const newSelected = new Set(selectedIds)
+    if (e.target.checked) {
+      newSelected.add(id)
+    } else {
+      newSelected.delete(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const isAllSelected = paginatedData.length > 0 && paginatedData.filter(t => !t.isVirtual).every(t => selectedIds.has(t.id))
+
   return (
     <div className="space-y-6">
       {/* Monthly grouping removed: show all transactions in the table below */}
@@ -199,7 +226,20 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
       {/* Transactions Table */}
       <div className="card overflow-x-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-800">📋 Transactions</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold text-gray-800">📋 Transactions</h2>
+            {selectedIds.size > 0 && typeof onBulkEdit === 'function' && (
+              <button 
+                onClick={() => {
+                  const selectedTxs = transactions.filter(t => selectedIds.has(t.id));
+                  onBulkEdit(selectedTxs);
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors shadow-sm text-sm"
+              >
+                ✏️ Bulk Edit ({selectedIds.size})
+              </button>
+            )}
+          </div>
           <div className="text-sm text-gray-600">
             {totalCount > 0 ? (
               <>
@@ -217,6 +257,14 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
                   <tr>
+                    <th className="px-4 py-3 text-center">
+                      <input 
+                        type="checkbox" 
+                        checked={isAllSelected}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-700">Date & Time</th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-700">Account</th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-700">Category</th>
@@ -228,7 +276,17 @@ export default function TransactionTable({ transactions, onDelete, onEdit }) {
                 </thead>
                 <tbody>
                   {paginatedData.map((transaction, index) => (
-                    <tr key={transaction.id} className={`border-b transition-colors ${transaction.isVirtual ? 'bg-gray-100 italic' : (index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100')}`}>
+                    <tr key={transaction.id} className={`border-b transition-colors ${transaction.isVirtual ? 'bg-gray-100 italic' : (index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100')} ${selectedIds.has(transaction.id) ? 'bg-blue-50' : ''}`}>
+                      <td className="px-4 py-3 text-center">
+                        {!transaction.isVirtual && (
+                          <input 
+                            type="checkbox"
+                            checked={selectedIds.has(transaction.id)}
+                            onChange={(e) => handleSelectOne(e, transaction.id)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          />
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-700 font-medium">
                         {formatDate(transaction.date)}
                         {transaction.time && <div className="text-xs text-gray-400">{transaction.time}</div>}

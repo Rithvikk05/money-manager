@@ -9,6 +9,7 @@ import ImportExport from './components/ImportExport'
 import DeletedTransactions from './components/DeletedTransactions'
 import MonthlySummary from './components/MonthlySummary'
 import Auth from './components/Auth'
+import BulkEditModal from './components/BulkEditModal'
 import {
   toYearMonth,
   isCarryTransaction,
@@ -48,6 +49,8 @@ export default function App() {
   const [editData, setEditData] = useState(null)
   const [initialData, setInitialData] = useState(null)
   const [editingInModal, setEditingInModal] = useState(false)
+  const [bulkEditTransactions, setBulkEditTransactions] = useState([])
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false)
 
   useEffect(() => {
     // Check if user is already logged in
@@ -196,6 +199,28 @@ export default function App() {
       handleCloseModal()
     } catch (error) {
       console.error('Error saving transaction:', error)
+    }
+  }
+
+  const handleBulkEditClick = (transactions) => {
+    setBulkEditTransactions(transactions)
+    setShowBulkEditModal(true)
+  }
+
+  const handleBulkEditSave = async (updates) => {
+    try {
+      const transactionIds = bulkEditTransactions.map(t => t.id)
+      await axios.put(`${API_BASE}/transactions/bulk`, {
+        transactionIds,
+        updates
+      })
+      setShowBulkEditModal(false)
+      setBulkEditTransactions([])
+      fetchTransactions()
+      fetchStats()
+    } catch (error) {
+      console.error('Error in bulk edit:', error)
+      alert('Failed to update transactions')
     }
   }
 
@@ -480,6 +505,7 @@ export default function App() {
             transactions={transactions}
             onDelete={handleDelete}
             onEdit={handleEditInModal}
+            onBulkEdit={handleBulkEditClick}
           />
         )}
 
@@ -533,12 +559,18 @@ export default function App() {
         </div>
       )}
 
+      {/* Bulk Edit Modal */}
+      {showBulkEditModal && (
+        <BulkEditModal
+          selectedCount={bulkEditTransactions.length}
+          onSave={handleBulkEditSave}
+          onClose={() => setShowBulkEditModal(false)}
+        />
+      )}
+
       {/* Footer */}
-      <footer className="bg-gray-800 text-white mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p>© 2026 Money Manager - Personal Finance Dashboard</p>
-          <p className="text-gray-400 text-sm mt-2">Track, manage and optimize your expenses</p>
-        </div>
+      <footer className="bg-white border-t mt-12 py-6 text-center text-gray-500">
+        <p>&copy; {new Date().getFullYear()} Money Manager. All rights reserved.</p>
       </footer>
     </div>
   )

@@ -537,6 +537,63 @@ app.post('/api/transactions', verifyToken, async (req, res) => {
 });
 
 // Update transaction (protected - per user)
+app.put('/api/transactions/bulk', verifyToken, async (req, res) => {
+  try {
+    const { transactionIds, updates } = req.body;
+    if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
+      return res.status(400).json({ error: 'No transactions selected' });
+    }
+
+    const { date, time, account, category, subcategory, note, currency, type, description } = updates;
+    
+    // Build update object with only defined fields (skip amount entirely)
+    const safeUpdates = {};
+    if (date !== undefined && date !== '') safeUpdates.date = String(date);
+    if (time !== undefined && time !== '') safeUpdates.time = String(time);
+    if (account !== undefined && account !== '') safeUpdates.account = String(account);
+    if (category !== undefined && category !== '') safeUpdates.category = String(category);
+    if (subcategory !== undefined && subcategory !== '') safeUpdates.subcategory = String(subcategory);
+    if (note !== undefined && note !== '') safeUpdates.note = String(note);
+    if (currency !== undefined && currency !== '') safeUpdates.currency = String(currency);
+    if (type !== undefined && type !== '') safeUpdates.type = String(type);
+    if (description !== undefined && description !== '') safeUpdates.description = String(description);
+
+    if (Object.keys(safeUpdates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    if (useMongo) {
+      await Transaction.updateMany(
+        { _id: { $in: transactionIds }, userId: req.userId },
+        { $set: safeUpdates }
+      );
+      res.json({ message: 'Transactions updated successfully' });
+    } else {
+      const setClauses = [];
+      const values = [];
+      for (const [key, val] of Object.entries(safeUpdates)) {
+        setClauses.push(`${key}=?`);
+        values.push(val);
+      }
+      
+      const placeholders = transactionIds.map(() => '?').join(',');
+      values.push(...transactionIds);
+      values.push(req.userId);
+      
+      await dbRun(
+        db,
+        `UPDATE transactions SET ${setClauses.join(', ')} WHERE id IN (${placeholders}) AND user_id=?`,
+        values
+      );
+      res.json({ message: 'Transactions updated successfully' });
+    }
+  } catch (err) {
+    console.error('Error updating multiple transactions:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update single transaction
 app.put('/api/transactions/:id', verifyToken, async (req, res) => {
   try {
     const { date, time, account, category, subcategory, note, amount, currency, type, description } = req.body;
