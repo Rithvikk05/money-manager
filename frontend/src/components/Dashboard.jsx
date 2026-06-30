@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { ComposedChart, Bar, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { ComposedChart, BarChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel } from '../utils/monthlyBalances'
 
 const formatDate = (dateString) => {
@@ -258,24 +258,23 @@ export default function Dashboard({ transactions, stats }) {
           <h3 className="text-xl font-bold text-gray-800 mb-4">🎯 Expenses by Category</h3>
           {categoryData.length > 0 ? (
             <div className="flex flex-col items-center justify-center">
-              <ResponsiveContainer width="100%" height={500}>
-                <PieChart>
-                  <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ₹${(value).toLocaleString('en-IN')}`} outerRadius={120} innerRadius={40} fill="#8884d8" dataKey="value">
+              <ResponsiveContainer width="100%" height={categoryData.length > 5 ? categoryData.length * 50 : 300}>
+                <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tickFormatter={(value) => `₹${(value/1000)}k`} />
+                  <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12}} />
+                  <Tooltip 
+                    formatter={(value) => `₹${value.toLocaleString('en-IN')}`} 
+                    cursor={{fill: 'rgba(200, 200, 200, 0.2)'}}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                  />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
-                </PieChart>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                {categoryData.map((cat, idx) => (
-                  <div key={cat.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                    <span className="truncate">{cat.name}: ₹{cat.value.toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           ) : (
             <p className="text-gray-500">No data available</p>

@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from 'react'
+import { useEffect, useState, useMemo, Fragment } from 'react'
 import { getUnifiedMonthlySummaries, getAccountMonthlyBalanceSummaries, monthLabel } from '../utils/monthlyBalances'
 import { exportToExcel } from '../utils/excelExport'
 

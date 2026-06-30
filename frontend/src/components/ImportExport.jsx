@@ -81,7 +81,72 @@ export default function ImportExport({ onImportSuccess }) {
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'Money Manager'
       
-      // 1. Transactions Sheet
+      // Calculate metrics
+      const monthlySummaries = getMonthlyBalanceSummaries(transactions)
+      const totalIncome = monthlySummaries.reduce((sum, month) => sum + month.income, 0)
+      const totalExpense = monthlySummaries.reduce((sum, month) => sum + month.expense, 0)
+      const balance = monthlySummaries.length > 0 ? monthlySummaries[monthlySummaries.length - 1].closing : 0
+
+      // 1. Dashboard Sheet
+      const dashboard = workbook.addWorksheet('Dashboard', { properties: { tabColor: { argb: 'FF4F81BD' } } })
+      dashboard.views = [{ showGridLines: false }]
+      
+      // Title
+      dashboard.mergeCells('B2:H3')
+      const titleCell = dashboard.getCell('B2')
+      titleCell.value = 'Money Manager Pro Dashboard'
+      titleCell.font = { size: 24, bold: true, color: { argb: 'FF4F81BD' } }
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+      // KPI Cards
+      const kpiRow = 6
+      
+      // Income KPI
+      dashboard.mergeCells(`B${kpiRow}:C${kpiRow+2}`)
+      const incomeCard = dashboard.getCell(`B${kpiRow}`)
+      incomeCard.value = `Total Income\n\n₹${totalIncome.toLocaleString('en-IN')}`
+      incomeCard.font = { size: 14, bold: true, color: { argb: 'FF00B050' } }
+      incomeCard.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      
+      for(let r=0; r<=2; r++) {
+        for(let c=2; c<=3; c++) {
+          const cell = dashboard.getCell(kpiRow+r, c)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } }
+          cell.border = { top: {style:'thin', color:{argb:'FF00B050'}}, left: {style:'thin', color:{argb:'FF00B050'}}, bottom: {style:'thin', color:{argb:'FF00B050'}}, right: {style:'thin', color:{argb:'FF00B050'}} }
+        }
+      }
+      
+      // Expense KPI
+      dashboard.mergeCells(`D${kpiRow}:E${kpiRow+2}`)
+      const expenseCard = dashboard.getCell(`D${kpiRow}`)
+      expenseCard.value = `Total Expense\n\n₹${totalExpense.toLocaleString('en-IN')}`
+      expenseCard.font = { size: 14, bold: true, color: { argb: 'FFFF0000' } }
+      expenseCard.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      
+      for(let r=0; r<=2; r++) {
+        for(let c=4; c<=5; c++) {
+          const cell = dashboard.getCell(kpiRow+r, c)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2DCDB' } }
+          cell.border = { top: {style:'thin', color:{argb:'FFFF0000'}}, left: {style:'thin', color:{argb:'FFFF0000'}}, bottom: {style:'thin', color:{argb:'FFFF0000'}}, right: {style:'thin', color:{argb:'FFFF0000'}} }
+        }
+      }
+      
+      // Balance KPI
+      dashboard.mergeCells(`F${kpiRow}:G${kpiRow+2}`)
+      const balanceCard = dashboard.getCell(`F${kpiRow}`)
+      balanceCard.value = `Net Balance\n\n₹${balance.toLocaleString('en-IN')}`
+      balanceCard.font = { size: 14, bold: true, color: { argb: 'FF0070C0' } }
+      balanceCard.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      
+      for(let r=0; r<=2; r++) {
+        for(let c=6; c<=7; c++) {
+          const cell = dashboard.getCell(kpiRow+r, c)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }
+          cell.border = { top: {style:'thin', color:{argb:'FF0070C0'}}, left: {style:'thin', color:{argb:'FF0070C0'}}, bottom: {style:'thin', color:{argb:'FF0070C0'}}, right: {style:'thin', color:{argb:'FF0070C0'}} }
+        }
+      }
+
+      // 2. Transactions Sheet
       const sheet1 = workbook.addWorksheet('All Transactions', { properties: { tabColor: { argb: 'FF00B0F0' } } })
       sheet1.columns = [
         { header: 'Date', key: 'date', width: 15 },
@@ -92,7 +157,6 @@ export default function ImportExport({ onImportSuccess }) {
         { header: 'Type', key: 'type', width: 15 }
       ]
       
-      // Style header
       sheet1.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
       sheet1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } }
       
@@ -110,8 +174,7 @@ export default function ImportExport({ onImportSuccess }) {
         if (t.type === 'Expense') row.getCell('type').font = { color: { argb: 'FFFF0000' }, bold: true }
       })
       
-      // 2. Summary Sheet
-      const monthlySummaries = getMonthlyBalanceSummaries(transactions)
+      // 3. Summary Sheet
       const sheet2 = workbook.addWorksheet('Monthly Summary', { properties: { tabColor: { argb: 'FF92D050' } } })
       
       sheet2.columns = [
