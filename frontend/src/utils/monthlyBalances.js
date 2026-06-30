@@ -175,10 +175,13 @@ export function getAccountMonthlyBalanceSummaries(transactions = [], accountFilt
       if (isExplicitClosing(t)) {
         let signedAmount = amount;
         const typeStr = (t.type || '').toLowerCase();
-        if (typeStr === 'expense' || typeStr === 'transfer-out' || typeStr === 'balance-out') {
-          signedAmount = -Math.abs(amount);
-        } else if (typeStr === 'income' || typeStr === 'transfer-in' || typeStr === 'balance-in') {
+        // For Closing (C/D), 'Balance-Out' is used for positive balances (carrying out)
+        // 'Balance-In' is used for negative balances (carrying in)
+        // Normal Income/Expense map naturally: Income = positive closing, Expense = negative closing
+        if (typeStr === 'balance-out' || typeStr === 'income' || typeStr === 'transfer-in') {
           signedAmount = Math.abs(amount);
+        } else if (typeStr === 'balance-in' || typeStr === 'expense' || typeStr === 'transfer-out') {
+          signedAmount = -Math.abs(amount);
         }
         closing = (closing || 0) + signedAmount
         continue

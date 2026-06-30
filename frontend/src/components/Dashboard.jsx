@@ -191,6 +191,14 @@ export default function Dashboard({ transactions, stats }) {
                   {currentMonth && (
                     <div className={`mt-2 space-y-1 border-t pt-3 text-xs ${isCash ? 'border-emerald-100' : 'border-indigo-100'}`}>
                       <p className="text-gray-500 font-semibold mb-1">{monthLabel(currentMonth.month)} Activity</p>
+                      {currentMonth.opening !== 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">{currentMonth.opening >= 0 ? 'Opening Balance' : 'Opening Debt'}</span>
+                          <span className={`font-semibold ${currentMonth.opening >= 0 ? 'text-gray-700' : 'text-red-600'}`}>
+                            {currentMonth.opening >= 0 ? '' : '-'}₹{Math.abs(currentMonth.opening).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
                       {currentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{currentMonth.income.toLocaleString('en-IN')}</span></div>}
                       {currentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{currentMonth.expense.toLocaleString('en-IN')}</span></div>}
                       {currentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{currentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
