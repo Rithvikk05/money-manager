@@ -161,12 +161,26 @@ export function getAccountMonthlyBalanceSummaries(transactions = [], accountFilt
       const amount = Number(t.amount) || 0
 
       if (isExplicitOpening(t)) {
-        opening = (opening || 0) + amount
+        let signedAmount = amount;
+        const typeStr = (t.type || '').toLowerCase();
+        if (typeStr === 'expense' || typeStr === 'transfer-out' || typeStr === 'balance-out') {
+          signedAmount = -Math.abs(amount);
+        } else if (typeStr === 'income' || typeStr === 'transfer-in' || typeStr === 'balance-in') {
+          signedAmount = Math.abs(amount);
+        }
+        opening = (opening || 0) + signedAmount
         continue
       }
 
       if (isExplicitClosing(t)) {
-        closing = (closing || 0) + amount
+        let signedAmount = amount;
+        const typeStr = (t.type || '').toLowerCase();
+        if (typeStr === 'expense' || typeStr === 'transfer-out' || typeStr === 'balance-out') {
+          signedAmount = -Math.abs(amount);
+        } else if (typeStr === 'income' || typeStr === 'transfer-in' || typeStr === 'balance-in') {
+          signedAmount = Math.abs(amount);
+        }
+        closing = (closing || 0) + signedAmount
         continue
       }
 

@@ -170,7 +170,7 @@ export default function Dashboard({ transactions, stats }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {uniqueAccounts.map((accName) => {
               const currentMonth = accountSummaries[accName]
-              const currentBalance = currentMonth ? (currentMonth.income - currentMonth.expense + currentMonth.transferIn - currentMonth.transferOut) : 0
+              const currentBalance = currentMonth ? currentMonth.closing : 0
               
               // Helper to decide card colors based on account name
               const isCash = accName.toLowerCase().includes('cash')
