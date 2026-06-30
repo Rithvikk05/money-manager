@@ -1,4 +1,6 @@
 import axios from 'axios'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, monthLabel, parseTransactionDate } from '../utils/monthlyBalances'
 
 const getApiBase = () => {
@@ -53,7 +55,7 @@ export default function ImportExport({ onImportSuccess }) {
     }
   }
 
-  const handleExportExcel = async () => {
+  const handleExportBackup = async () => {
     try {
       const response = await axios.get(`${API_BASE}/export/excel`, {
         responseType: 'blob',
@@ -61,13 +63,86 @@ export default function ImportExport({ onImportSuccess }) {
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.xlsx`)
+      link.setAttribute('download', `transactions_backup_${new Date().toISOString().split('T')[0]}.xlsx`)
       document.body.appendChild(link)
       link.click()
       link.parentNode.removeChild(link)
-      alert('✅ Excel file downloaded successfully!')
+      alert('✅ Backup Excel file downloaded successfully!')
     } catch (error) {
-      alert('❌ Error exporting file: ' + error.message)
+      alert('❌ Error exporting backup: ' + error.message)
+    }
+  }
+
+  const handleExportPresentation = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/transactions`)
+      const transactions = Array.isArray(response.data) ? response.data : []
+      
+      const workbook = new ExcelJS.Workbook()
+      workbook.creator = 'Money Manager'
+      
+      // 1. Transactions Sheet
+      const sheet1 = workbook.addWorksheet('All Transactions', { properties: { tabColor: { argb: 'FF00B0F0' } } })
+      sheet1.columns = [
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Account', key: 'account', width: 20 },
+        { header: 'Category', key: 'category', width: 20 },
+        { header: 'Note', key: 'note', width: 35 },
+        { header: 'Amount', key: 'amount', width: 15 },
+        { header: 'Type', key: 'type', width: 15 }
+      ]
+      
+      // Style header
+      sheet1.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      sheet1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } }
+      
+      transactions.forEach(t => {
+        const row = sheet1.addRow({
+          date: formatDisplayDate(t.date),
+          account: t.account,
+          category: t.category,
+          note: t.note,
+          amount: t.amount,
+          type: t.type
+        })
+        row.getCell('amount').numFmt = '"₹"#,##0.00;[Red]\-"₹"#,##0.00'
+        if (t.type === 'Income') row.getCell('type').font = { color: { argb: 'FF00B050' }, bold: true }
+        if (t.type === 'Expense') row.getCell('type').font = { color: { argb: 'FFFF0000' }, bold: true }
+      })
+      
+      // 2. Summary Sheet
+      const monthlySummaries = getMonthlyBalanceSummaries(transactions)
+      const sheet2 = workbook.addWorksheet('Monthly Summary', { properties: { tabColor: { argb: 'FF92D050' } } })
+      
+      sheet2.columns = [
+        { header: 'Month', key: 'month', width: 20 },
+        { header: 'Income', key: 'income', width: 20 },
+        { header: 'Expense', key: 'expense', width: 20 },
+        { header: 'Closing Balance', key: 'closing', width: 20 }
+      ]
+      
+      sheet2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      sheet2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B050' } }
+      
+      monthlySummaries.forEach(m => {
+        const row = sheet2.addRow({
+          month: monthLabel(m.month),
+          income: m.income,
+          expense: m.expense,
+          closing: m.closing
+        })
+        row.getCell('income').numFmt = '"₹"#,##0.00'
+        row.getCell('expense').numFmt = '"₹"#,##0.00'
+        row.getCell('closing').numFmt = '"₹"#,##0.00'
+        row.getCell('closing').font = { bold: true }
+      })
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      saveAs(new Blob([buffer]), \`money_manager_dashboard_\${new Date().toISOString().split('T')[0]}.xlsx\`)
+      alert('✅ Professional Dashboard Excel exported successfully!')
+    } catch (error) {
+      console.error(error)
+      alert('❌ Error exporting presentation: ' + error.message)
     }
   }
 
@@ -250,26 +325,31 @@ export default function ImportExport({ onImportSuccess }) {
       </div>
 
       {/* Export Section */}
-      <div className="card">
+      <div className="card shadow-md">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">📤 Export Transactions</h2>
-        <p className="text-gray-600 mb-6">Export your transactions in different formats:</p>
+        <p className="text-gray-600 mb-6">Export your transactions in different formats depending on your needs:</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button onClick={handleExportExcel} className="btn-primary flex items-center justify-center gap-2 h-16">
-            <span>📊</span>
-            <span>Export to Excel</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button onClick={handleExportBackup} className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transform active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1 h-24 p-2">
+            <span className="text-2xl">💾</span>
+            <span className="text-sm">Raw Backup (Excel)</span>
           </button>
 
-          <button onClick={handleExportHTML} className="btn-secondary flex items-center justify-center gap-2 h-16">
-            <span>🌐</span>
-            <span>Export to HTML</span>
+          <button onClick={handleExportPresentation} className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transform active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1 h-24 p-2 relative overflow-hidden">
+            <span className="absolute -right-4 -top-4 text-white/20 text-6xl">📊</span>
+            <span className="text-2xl">✨</span>
+            <span className="text-sm z-10">Pro Dashboard (Excel)</span>
+          </button>
+
+          <button onClick={handleExportHTML} className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transform active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1 h-24 p-2">
+            <span className="text-2xl">🌐</span>
+            <span className="text-sm">Printable Report (HTML)</span>
           </button>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
           <p className="text-sm text-gray-700">
-            <strong>💡 Tip:</strong> Use Excel export for data analysis and manipulation. Use HTML export for
-            viewing in a browser or printing to PDF.
+            <strong>💡 Tip:</strong> Use <strong>Raw Backup</strong> for safekeeping or moving to another app. Use <strong>Pro Dashboard</strong> for a beautifully formatted spreadsheet ready for presentations.
           </p>
         </div>
       </div>

@@ -278,105 +278,71 @@ export function injectVirtualCarryTransactions(transactions = []) {
 export function getUnifiedMonthlySummaries(transactions = []) {
   const uniqueAccounts = [...new Set((transactions || []).map(t => t.account).filter(Boolean))]
   
-  const cashAccounts = uniqueAccounts.filter(acc => acc.toLowerCase().includes('cash'))
-  const bankAccounts = uniqueAccounts.filter(acc => !acc.toLowerCase().includes('cash'))
+  // Calculate summaries for each individual account
+  const accountSummaries = {}
+  uniqueAccounts.forEach(acc => {
+    accountSummaries[acc] = getAccountMonthlyBalanceSummaries(transactions, a => a === acc)
+  })
 
-  const getGroupedSummary = (accounts) => {
-    const allSummaries = accounts.map(acc => getAccountMonthlyBalanceSummaries(transactions, a => a === acc))
-    const monthSet = new Set()
-    allSummaries.forEach(list => list.forEach(s => monthSet.add(s.month)))
-    const months = Array.from(monthSet).sort()
-    
-    const result = []
-    for (const ym of months) {
-      let opening = 0
-      let income = 0
-      let expense = 0
-      let transferIn = 0
-      let transferOut = 0
-      let closing = 0
-
-      for (const accSummaryList of allSummaries) {
-        const accMonth = accSummaryList.find(s => s.month === ym)
-        if (accMonth) {
-          opening += accMonth.opening
-          income += accMonth.income
-          expense += accMonth.expense
-          transferIn += accMonth.transferIn
-          transferOut += accMonth.transferOut
-          closing += accMonth.closing
-        } else {
-          const pastMonths = accSummaryList.filter(s => s.month <= ym)
-          if (pastMonths.length > 0) {
-            const last = pastMonths[pastMonths.length - 1]
-            opening += last.closing
-            closing += last.closing
-          }
-        }
-      }
-      result.push({ month: ym, opening, income, expense, transferIn, transferOut, closing })
-    }
-    return result
-  }
-
-  const cashRaw = getGroupedSummary(cashAccounts)
-  const bankRaw = getGroupedSummary(bankAccounts)
-
-  // Collect all unique months from both lists
-  const allMonths = Array.from(new Set([
-    ...cashRaw.map(s => s.month),
-    ...bankRaw.map(s => s.month)
-  ])).sort()
+  // Collect all unique months
+  const monthSet = new Set()
+  Object.values(accountSummaries).forEach(list => list.forEach(s => monthSet.add(s.month)))
+  const allMonths = Array.from(monthSet).sort()
 
   const unified = []
-  let prevCashClosing = 0
-  let prevBankClosing = 0
+  
+  // Track previous closing balances for all accounts
+  const prevClosing = {}
+  uniqueAccounts.forEach(acc => prevClosing[acc] = 0)
 
   for (const ym of allMonths) {
-    let cash = cashRaw.find(s => s.month === ym)
-    if (!cash) {
-      cash = {
-        month: ym,
-        opening: prevCashClosing,
-        income: 0,
-        expense: 0,
-        transferIn: 0,
-        transferOut: 0,
-        closing: prevCashClosing
-      }
-    } else {
-      prevCashClosing = cash.closing
-    }
+    const monthAccounts = {}
+    let totalOpening = 0
+    let totalIncome = 0
+    let totalExpense = 0
+    let totalTransferIn = 0
+    let totalTransferOut = 0
+    let totalClosing = 0
 
-    let bank = bankRaw.find(s => s.month === ym)
-    if (!bank) {
-      bank = {
-        month: ym,
-        opening: prevBankClosing,
-        income: 0,
-        expense: 0,
-        transferIn: 0,
-        transferOut: 0,
-        closing: prevBankClosing
+    for (const acc of uniqueAccounts) {
+      let accData = accountSummaries[acc].find(s => s.month === ym)
+      if (!accData) {
+        accData = {
+          month: ym,
+          opening: prevClosing[acc],
+          income: 0,
+          expense: 0,
+          transferIn: 0,
+          transferOut: 0,
+          closing: prevClosing[acc]
+        }
+      } else {
+        prevClosing[acc] = accData.closing
       }
-    } else {
-      prevBankClosing = bank.closing
+      
+      monthAccounts[acc] = accData
+      
+      totalOpening += accData.opening
+      totalIncome += accData.income
+      totalExpense += accData.expense
+      totalTransferIn += accData.transferIn
+      totalTransferOut += accData.transferOut
+      totalClosing += accData.closing
     }
 
     const total = {
       month: ym,
-      opening: cash.opening + bank.opening,
-      income: cash.income + bank.income,
-      expense: cash.expense + bank.expense,
-      transferIn: cash.transferIn + bank.transferIn,
-      transferOut: cash.transferOut + bank.transferOut,
-      closing: cash.closing + bank.closing
+      opening: totalOpening,
+      income: totalIncome,
+      expense: totalExpense,
+      transferIn: totalTransferIn,
+      transferOut: totalTransferOut,
+      closing: totalClosing
     }
 
     unified.push({
       month: ym,
-      cash,
-      bank,
+      accounts: monthAccounts,
       total
     })
   }

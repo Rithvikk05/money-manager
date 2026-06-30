@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { ComposedChart, Bar, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getMonthlyBalanceSummaries, getAccountMonthlyBalanceSummaries, isCarryTransaction, monthLabel } from '../utils/monthlyBalances'
 
 const formatDate = (dateString) => {
@@ -219,15 +219,34 @@ export default function Dashboard({ transactions, stats }) {
           <h3 className="text-xl font-bold text-gray-800 mb-4">📈 Monthly Trend</h3>
           {monthlyArray.length > 0 ? (
             <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={monthlyArray}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
-                <Legend />
-                <Line type="monotone" dataKey="income" stroke="#22c55e" name="Income" strokeWidth={2} />
-                <Line type="monotone" dataKey="expense" stroke="#ef4444" name="Expense" strokeWidth={2} />
-              </LineChart>
+              <ComposedChart data={monthlyArray}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Tooltip 
+                  formatter={(value) => `₹${value.toLocaleString('en-IN')}`} 
+                  cursor={{fill: 'rgba(200, 200, 200, 0.2)'}}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                <Bar 
+                  dataKey="expense" 
+                  name="Expense" 
+                  fill="#ef4444" 
+                  radius={[6, 6, 0, 0]} 
+                  barSize={40} 
+                  opacity={0.8}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="income" 
+                  name="Income" 
+                  stroke="#22c55e" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, strokeWidth: 2 }} 
+                  activeDot={{ r: 6 }} 
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <p className="text-gray-500">No data available</p>

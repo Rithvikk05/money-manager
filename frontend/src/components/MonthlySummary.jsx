@@ -39,30 +39,41 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
     }
   }
 
-  // Calculate totals
-  const cashTotals = {
-    opening: unifiedSummaries[0]?.cash.opening || 0,
-    income: unifiedSummaries.reduce((sum, s) => sum + (s.cash.income || 0), 0),
-    expense: unifiedSummaries.reduce((sum, s) => sum + (s.cash.expense || 0), 0),
-    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.cash.transferIn || 0) - (s.cash.transferOut || 0)), 0),
-    closing: unifiedSummaries[unifiedSummaries.length - 1]?.cash.closing || 0
-  }
+  // Calculate totals dynamically for each unique account found across all months
+  const accountTotals = useMemo(() => {
+    if (unifiedSummaries.length === 0) return {};
+    
+    // Find all unique accounts across all months
+    const allAccounts = new Set();
+    unifiedSummaries.forEach(s => {
+      if (s.accounts) {
+        Object.keys(s.accounts).forEach(acc => allAccounts.add(acc));
+      }
+    });
 
-  const bankTotals = {
-    opening: unifiedSummaries[0]?.bank.opening || 0,
-    income: unifiedSummaries.reduce((sum, s) => sum + (s.bank.income || 0), 0),
-    expense: unifiedSummaries.reduce((sum, s) => sum + (s.bank.expense || 0), 0),
-    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.bank.transferIn || 0) - (s.bank.transferOut || 0)), 0),
-    closing: unifiedSummaries[unifiedSummaries.length - 1]?.bank.closing || 0
-  }
+    const totals = {};
+    allAccounts.forEach(acc => {
+      totals[acc] = {
+        opening: unifiedSummaries[0]?.accounts[acc]?.opening || 0,
+        income: unifiedSummaries.reduce((sum, s) => sum + (s.accounts[acc]?.income || 0), 0),
+        expense: unifiedSummaries.reduce((sum, s) => sum + (s.accounts[acc]?.expense || 0), 0),
+        netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.accounts[acc]?.transferIn || 0) - (s.accounts[acc]?.transferOut || 0)), 0),
+        closing: unifiedSummaries[unifiedSummaries.length - 1]?.accounts[acc]?.closing || 0
+      };
+    });
+    return totals;
+  }, [unifiedSummaries]);
 
-  const overallTotals = {
-    opening: unifiedSummaries[0]?.total.opening || 0,
-    income: unifiedSummaries.reduce((sum, s) => sum + (s.total.income || 0), 0),
-    expense: unifiedSummaries.reduce((sum, s) => sum + (s.total.expense || 0), 0),
-    netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.total.transferIn || 0) - (s.total.transferOut || 0)), 0),
-    closing: unifiedSummaries[unifiedSummaries.length - 1]?.total.closing || 0
-  }
+  const overallTotals = useMemo(() => {
+    if (unifiedSummaries.length === 0) return { opening: 0, income: 0, expense: 0, netTransfers: 0, closing: 0 };
+    return {
+      opening: unifiedSummaries[0]?.total.opening || 0,
+      income: unifiedSummaries.reduce((sum, s) => sum + (s.total.income || 0), 0),
+      expense: unifiedSummaries.reduce((sum, s) => sum + (s.total.expense || 0), 0),
+      netTransfers: unifiedSummaries.reduce((sum, s) => sum + ((s.total.transferIn || 0) - (s.total.transferOut || 0)), 0),
+      closing: unifiedSummaries[unifiedSummaries.length - 1]?.total.closing || 0
+    };
+  }, [unifiedSummaries]);
 
   return (
     <div className="space-y-8">
@@ -131,64 +142,53 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                 {unifiedSummaries.map((summary, idx) => {
                   const isEven = idx % 2 === 0
                   const monthBg = isEven ? 'bg-slate-50' : 'bg-white'
+                  const accountNames = Object.keys(summary.accounts || {}).sort((a, b) => a.localeCompare(b))
+                  const rowCount = accountNames.length + 1 // +1 for the Total row
+                  
                   return (
                     <Fragment key={summary.month}>
-                      {/* Cash Row */}
-                      <tr className={`${monthBg} hover:bg-blue-50/40 transition-colors`}>
-                        <td 
-                          rowSpan={3} 
-                          className="px-6 py-4 font-bold text-gray-800 border-r border-gray-200 text-center align-middle bg-gradient-to-b from-gray-50/30 to-gray-100/30 text-base"
-                        >
-                          {monthLabel(summary.month)}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-gray-700">
-                          <span className="mr-2">💵</span> Cash
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-blue-600">
-                          ₹{(summary.cash.opening || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-green-600">
-                          ₹{(summary.cash.income || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-red-600">
-                          ₹{(summary.cash.expense || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold">
-                          <span className={((summary.cash.transferIn || 0) - (summary.cash.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}>
-                            {((summary.cash.transferIn || 0) - (summary.cash.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.cash.transferIn || 0) - (summary.cash.transferOut || 0)).toLocaleString('en-IN')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-700">
-                          ₹{(summary.cash.closing || 0).toLocaleString('en-IN')}
-                        </td>
-                      </tr>
+                      {accountNames.map((accName, accIdx) => {
+                        const accData = summary.accounts[accName]
+                        const isCash = accName.toLowerCase().includes('cash')
+                        const icon = isCash ? '💵' : '🏦'
+                        const colorTheme = isCash ? 'text-emerald-600' : 'text-blue-600'
+                        
+                        return (
+                          <tr key={`${summary.month}-${accName}`} className={`${monthBg} hover:bg-blue-50/40 transition-colors`}>
+                            {accIdx === 0 && (
+                              <td 
+                                rowSpan={rowCount} 
+                                className="px-6 py-4 font-bold text-gray-800 border-r border-gray-200 text-center align-middle bg-gradient-to-b from-gray-50/30 to-gray-100/30 text-base"
+                              >
+                                {monthLabel(summary.month)}
+                              </td>
+                            )}
+                            <td className="px-6 py-4 font-medium text-gray-700">
+                              <span className="mr-2">{icon}</span> {accName}
+                            </td>
+                            <td className={`px-6 py-4 text-right font-semibold ${colorTheme}`}>
+                              ₹{(accData.opening || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-6 py-4 text-right font-semibold text-green-600">
+                              ₹{(accData.income || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-6 py-4 text-right font-semibold text-red-600">
+                              ₹{(accData.expense || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-6 py-4 text-right font-semibold">
+                              <span className={((accData.transferIn || 0) - (accData.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}>
+                                {((accData.transferIn || 0) - (accData.transferOut || 0)) >= 0 ? '+' : ''}₹{((accData.transferIn || 0) - (accData.transferOut || 0)).toLocaleString('en-IN')}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right font-bold text-gray-700">
+                              ₹{(accData.closing || 0).toLocaleString('en-IN')}
+                            </td>
+                          </tr>
+                        )
+                      })}
 
-                      {/* Bank & Card Row */}
-                      <tr className={`${monthBg} hover:bg-blue-50/40 transition-colors`}>
-                        <td className="px-6 py-4 font-medium text-gray-700">
-                          <span className="mr-2">🏦</span> Bank & Card
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-blue-600">
-                          ₹{(summary.bank.opening || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-green-600">
-                          ₹{(summary.bank.income || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-red-600">
-                          ₹{(summary.bank.expense || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold">
-                          <span className={((summary.bank.transferIn || 0) - (summary.bank.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}>
-                            {((summary.bank.transferIn || 0) - (summary.bank.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.bank.transferIn || 0) - (summary.bank.transferOut || 0)).toLocaleString('en-IN')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-700">
-                          ₹{(summary.bank.closing || 0).toLocaleString('en-IN')}
-                        </td>
-                      </tr>
-
-                      {/* Combined Total Row */}
-                      <tr className="bg-blue-50/30 hover:bg-blue-50/60 font-semibold border-b-2 border-gray-300">
+                      {/* Combined Total Row for the Month */}
+                      <tr className="bg-indigo-50/40 hover:bg-indigo-50/80 font-semibold border-b-2 border-indigo-200">
                         <td className="px-6 py-4 font-bold text-indigo-900">
                           <span className="mr-2">💼</span> Total
                         </td>
@@ -215,44 +215,34 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                 })}
 
                 {/* Grand Totals */}
-                {/* Grand Total Cash */}
-                <tr className="bg-slate-100 font-bold border-t-2 border-slate-300 hover:bg-slate-200 transition-colors">
-                  <td className="px-6 py-4 text-gray-800 text-center" colSpan={2}>
-                    <span className="mr-2">💵</span> Grand Total - Cash
-                  </td>
-                  <td className="px-6 py-4 text-right text-blue-700">₹{cashTotals.opening.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right text-green-700">₹{cashTotals.income.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right text-red-700">₹{cashTotals.expense.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={cashTotals.netTransfers >= 0 ? 'text-teal-700' : 'text-orange-600'}>
-                      {cashTotals.netTransfers >= 0 ? '+' : ''}₹{cashTotals.netTransfers.toLocaleString('en-IN')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-gray-800">₹{cashTotals.closing.toLocaleString('en-IN')}</td>
-                </tr>
-
-                {/* Grand Total Bank */}
-                <tr className="bg-slate-100 font-bold hover:bg-slate-200 transition-colors">
-                  <td className="px-6 py-4 text-gray-800 text-center" colSpan={2}>
-                    <span className="mr-2">🏦</span> Grand Total - Bank & Card
-                  </td>
-                  <td className="px-6 py-4 text-right text-blue-700">₹{bankTotals.opening.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right text-green-700">₹{bankTotals.income.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right text-red-700">₹{bankTotals.expense.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={bankTotals.netTransfers >= 0 ? 'text-teal-700' : 'text-orange-600'}>
-                      {bankTotals.netTransfers >= 0 ? '+' : ''}₹{bankTotals.netTransfers.toLocaleString('en-IN')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-gray-800">₹{bankTotals.closing.toLocaleString('en-IN')}</td>
-                </tr>
+                {Object.keys(accountTotals).sort((a, b) => a.localeCompare(b)).map((accName) => {
+                  const totals = accountTotals[accName]
+                  const isCash = accName.toLowerCase().includes('cash')
+                  const icon = isCash ? '💵' : '🏦'
+                  return (
+                    <tr key={`grand-total-${accName}`} className="bg-slate-100 font-bold border-t border-slate-200 hover:bg-slate-200 transition-colors">
+                      <td className="px-6 py-4 text-gray-800 text-center" colSpan={2}>
+                        <span className="mr-2">{icon}</span> Grand Total - {accName}
+                      </td>
+                      <td className="px-6 py-4 text-right text-blue-700">₹{totals.opening.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-green-700">₹{totals.income.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-red-700">₹{totals.expense.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={totals.netTransfers >= 0 ? 'text-teal-700' : 'text-orange-600'}>
+                          {totals.netTransfers >= 0 ? '+' : ''}₹{totals.netTransfers.toLocaleString('en-IN')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right text-gray-800">₹{totals.closing.toLocaleString('en-IN')}</td>
+                    </tr>
+                  )
+                })}
 
                 {/* Grand Total Overall */}
-                <tr className="bg-gradient-to-r from-blue-100 to-indigo-50 font-black text-indigo-950 border-t-2 border-b-2 border-indigo-300 hover:from-blue-150 hover:to-indigo-100 transition-colors">
+                <tr className="bg-gradient-to-r from-indigo-100 to-purple-100 font-black text-indigo-950 border-t-4 border-indigo-300 hover:from-indigo-200 hover:to-purple-200 transition-colors shadow-inner">
                   <td className="px-6 py-4 text-center text-indigo-950" colSpan={2}>
-                    <span className="mr-2">💼</span> Grand Total - Overall
+                    <span className="mr-2">🌍</span> Grand Total - Overall
                   </td>
-                  <td className="px-6 py-4 text-right text-blue-900">₹{overallTotals.opening.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-indigo-900">₹{overallTotals.opening.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-right text-green-800">₹{overallTotals.income.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-right text-red-800">₹{overallTotals.expense.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-right">
@@ -260,7 +250,7 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                       {overallTotals.netTransfers >= 0 ? '+' : ''}₹{overallTotals.netTransfers.toLocaleString('en-IN')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-indigo-950 text-base">₹{overallTotals.closing.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-indigo-950 text-xl shadow-sm">₹{overallTotals.closing.toLocaleString('en-IN')}</td>
                 </tr>
               </tbody>
             </table>

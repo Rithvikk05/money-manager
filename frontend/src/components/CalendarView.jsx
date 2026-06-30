@@ -312,13 +312,32 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
             </div>
             <p className="text-sm text-gray-500 mt-3">Closing is carried forward to the next month as opening.</p>
             {selectedMonthAccountSummaries.length > 0 && (
-              <div className="mt-4 border-t pt-3">
-                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Account-wise</p>
-                <div className="space-y-1 text-sm">
+              <div className="mt-4 border-t border-gray-200 pt-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-3 tracking-wider">Account-wise Breakdown</p>
+                <div className="space-y-4 text-sm">
                   {selectedMonthAccountSummaries.map((item) => (
-                    <div key={item.account} className="flex justify-between gap-2">
-                      <span className="truncate">{item.account}</span>
-                      <strong className={item.closing >= 0 ? 'text-gray-700' : 'text-red-600'}>{formatMoney(item.closing)}</strong>
+                    <div key={item.account} className="bg-gray-50 p-3 rounded-lg border border-gray-100 shadow-sm">
+                      <div className="font-semibold text-gray-800 mb-2 pb-1 border-b border-gray-200 flex items-center gap-2">
+                        {item.account.toLowerCase().includes('cash') ? '💵' : '🏦'} {item.account}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-gray-600">
+                          <span>Opening (B/D)</span>
+                          <span className="font-medium text-blue-700">{formatMoney(item.opening)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Income</span>
+                          <span className="font-medium text-green-600">{formatMoney(item.income)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Expense</span>
+                          <span className="font-medium text-red-600">{formatMoney(item.expense)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 mt-1 border-t border-gray-200">
+                          <span className="font-semibold text-gray-700">Closing (C/F)</span>
+                          <strong className={item.closing >= 0 ? 'text-gray-900' : 'text-red-700'}>{formatMoney(item.closing)}</strong>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
