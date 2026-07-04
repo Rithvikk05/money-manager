@@ -171,7 +171,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
       }
       
       // Determine border color based on income/expense
-      let borderColor = 'border-gray-200'
+      let borderColor = 'border-gray-200 dark:border-slate-700'
       if (dayIncome > 0 && dayExpense === 0) {
         borderColor = 'border-green-500 border-2'
       } else if (dayExpense > 0 && dayIncome === 0) {
@@ -188,13 +188,13 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
       dayCells.push(
         <div
           key={day}
-          className={`p-2 rounded min-h-[64px] cursor-pointer border transition-colors hover:bg-gray-50 ${borderColor}`}
+          className={`p-2 rounded min-h-[64px] cursor-pointer border transition-colors hover:bg-gray-50 dark:hover:bg-slate-700 ${borderColor}`}
           title={dayLabel}
           onClick={() => setSelectedDay(day)}
         >
           <div className="flex justify-between items-start">
             <span className="font-medium">{day}</span>
-            {txs.length > 0 && <span className="text-xs bg-blue-100 text-blue-800 px-2 rounded">{txs.length}</span>}
+            {txs.length > 0 && <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 rounded">{txs.length}</span>}
           </div>
           <div className="mt-2 space-y-1 text-xs">
             {(() => {
@@ -208,7 +208,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                     }`}>
                       ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                     </span>
-                    <span className={`${transaction.isVirtual ? 'text-purple-400 italic' : 'text-gray-700'}`}>
+                    <span className={`${transaction.isVirtual ? 'text-purple-400 italic' : 'text-gray-700 dark:text-slate-300'}`}>
                       {transaction.isVirtual ? transaction.category : (transaction.category || '—')}
                     </span>
                   </div>
@@ -216,7 +216,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
               }
               return nodes
             })()}
-            {txs.length > 3 && <div className="text-gray-400">+{txs.length - 3} more</div>}
+            {txs.length > 3 && <div className="text-gray-400 dark:text-slate-500">+{txs.length - 3} more</div>}
           </div>
         </div>
       )
@@ -262,7 +262,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
               autoSync
                 ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600'
             }`}
             title={autoSync ? 'Auto sync is ON - balances will update when you change months' : 'Click to enable auto sync'}
           >
@@ -310,32 +310,32 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                 <strong>{formatMoney(selectedMonthSummary?.closing || 0)}</strong>
               </div>
             </div>
-            <p className="text-sm text-gray-500 mt-3">Closing is carried forward to the next month as opening.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-3">Closing is carried forward to the next month as opening.</p>
             {selectedMonthAccountSummaries.length > 0 && (
-              <div className="mt-4 border-t border-gray-200 pt-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-3 tracking-wider">Account-wise Breakdown</p>
+              <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-3">
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3 tracking-wider">Account-wise Breakdown</p>
                 <div className="space-y-4 text-sm">
                   {selectedMonthAccountSummaries.map((item) => (
-                    <div key={item.account} className="bg-gray-50 p-3 rounded-lg border border-gray-100 shadow-sm">
-                      <div className="font-semibold text-gray-800 mb-2 pb-1 border-b border-gray-200 flex items-center gap-2">
+                    <div key={item.account} className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-100 dark:border-slate-700 shadow-sm">
+                      <div className="font-semibold text-gray-800 dark:text-slate-100 mb-2 pb-1 border-b border-gray-200 dark:border-slate-700 flex items-center gap-2">
                         {item.account.toLowerCase().includes('cash') ? '💵' : '🏦'} {item.account}
                       </div>
                       <div className="space-y-1">
-                        <div className="flex justify-between text-gray-600">
+                        <div className="flex justify-between text-gray-600 dark:text-slate-300">
                           <span>Opening (B/D)</span>
-                          <span className="font-medium text-blue-700">{formatMoney(item.opening)}</span>
+                          <span className="font-medium text-blue-700 dark:text-blue-400">{formatMoney(item.opening)}</span>
                         </div>
-                        <div className="flex justify-between text-gray-600">
+                        <div className="flex justify-between text-gray-600 dark:text-slate-300">
                           <span>Income</span>
                           <span className="font-medium text-green-600">{formatMoney(item.income)}</span>
                         </div>
-                        <div className="flex justify-between text-gray-600">
+                        <div className="flex justify-between text-gray-600 dark:text-slate-300">
                           <span>Expense</span>
                           <span className="font-medium text-red-600">{formatMoney(item.expense)}</span>
                         </div>
-                        <div className="flex justify-between pt-1 mt-1 border-t border-gray-200">
-                          <span className="font-semibold text-gray-700">Closing (C/F)</span>
-                          <strong className={item.closing >= 0 ? 'text-gray-900' : 'text-red-700'}>{formatMoney(item.closing)}</strong>
+                        <div className="flex justify-between pt-1 mt-1 border-t border-gray-200 dark:border-slate-700">
+                          <span className="font-semibold text-gray-700 dark:text-slate-300">Closing (C/F)</span>
+                          <strong className={item.closing >= 0 ? 'text-gray-900 dark:text-slate-100' : 'text-red-700 dark:text-red-400'}>{formatMoney(item.closing)}</strong>
                         </div>
                       </div>
                     </div>
@@ -354,12 +354,12 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
           </div>
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">No months available</div>
+        <div className="text-center py-12 text-gray-500 dark:text-slate-400">No months available</div>
       )}
 
       {selectedDay && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg max-w-2xl w-full p-4">
+          <div className="bg-white dark:bg-slate-800 rounded shadow-lg max-w-2xl w-full p-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
                 Transactions for {monthLabel(selectedMonth)} - {selectedDay}
@@ -384,8 +384,8 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                 const isIncome = String(transaction.type || '').toLowerCase() === 'income' || String(transaction.type || '').toLowerCase() === 'transfer-in'
                 const isExpense = String(transaction.type || '').toLowerCase() === 'expense' || String(transaction.type || '').toLowerCase() === 'transfer-out'
                 
-                let cardBgColor = 'bg-gray-50 border-gray-200'
-                let badgeColor = 'bg-gray-100 text-gray-800'
+                let cardBgColor = 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700'
+                let badgeColor = 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100'
                 
                 if (transaction.isVirtual) {
                   cardBgColor = 'bg-purple-50 border-purple-200'
@@ -401,24 +401,24 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                 return (
                   <div key={transaction.id} className={`p-3 border rounded-lg flex justify-between items-center transition-colors ${cardBgColor}`}>
                     <div className="flex-1">
-                      <div className={`font-semibold flex items-center gap-2 ${transaction.isVirtual ? 'text-purple-700 italic' : isIncome ? 'text-green-700' : isExpense ? 'text-red-700' : 'text-gray-700'}`}>
+                      <div className={`font-semibold flex items-center gap-2 ${transaction.isVirtual ? 'text-purple-700 italic' : isIncome ? 'text-green-700' : isExpense ? 'text-red-700' : 'text-gray-700 dark:text-slate-300'}`}>
                         {transaction.time && <span className={`text-xs px-2 py-1 rounded font-medium ${badgeColor}`}>{transaction.time}</span>}
                         <span>{transaction.note || transaction.category || '—'}</span>
                       </div>
-                      <div className={`text-sm mt-1 ${transaction.isVirtual ? 'text-purple-600' : 'text-gray-600'}`}>
+                      <div className={`text-sm mt-1 ${transaction.isVirtual ? 'text-purple-600' : 'text-gray-600 dark:text-slate-300'}`}>
                         {transaction.category} • {transaction.account || ''}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 ml-3">
                       <div className="text-right">
-                        <div className={`text-lg font-bold ${isIncome ? 'text-green-600' : isExpense ? 'text-red-600' : 'text-gray-700'}`}>
+                        <div className={`text-lg font-bold ${isIncome ? 'text-green-600' : isExpense ? 'text-red-600' : 'text-gray-700 dark:text-slate-300'}`}>
                           {isIncome ? '+' : isExpense ? '−' : ''}₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                         </div>
                         <div className={`text-xs font-semibold px-2 py-1 rounded mt-1 ${
                           transaction.isVirtual ? 'bg-purple-100 text-purple-800' :
                           isIncome ? 'bg-green-100 text-green-800' :
                           isExpense ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
+                          'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100'
                         }`}>
                           {transaction.isVirtual ? 'Auto' : isIncome ? 'Income' : isExpense ? 'Expense' : 'Transfer'}
                         </div>
@@ -437,7 +437,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                   </div>
                 )
               })}
-              {selectedDayTransactions.length === 0 && <div className="text-center text-gray-500 p-6">No transactions</div>}
+              {selectedDayTransactions.length === 0 && <div className="text-center text-gray-500 dark:text-slate-400 p-6">No transactions</div>}
             </div>
           </div>
         </div>

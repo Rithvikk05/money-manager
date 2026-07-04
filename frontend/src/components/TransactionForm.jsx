@@ -271,7 +271,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
     <div className="max-w-2xl mx-auto">
       <div className="card">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-200">
             {editData ? '✏️ Edit Transaction' : showTransferMode ? '🔄 Transfer Money' : '➕ Add New Transaction'}
           </h2>
           {!editData && (
@@ -280,7 +280,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               onClick={() => setShowTransferMode(!showTransferMode)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                 showTransferMode
-                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-300'
                   : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-md'
               }`}
             >
@@ -293,8 +293,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
         {showTransferMode && !editData ? (
           <form onSubmit={handleTransferSubmit} className="space-y-4">
             {/* Info banner */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800 font-medium">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">
                 💡 <strong>Transfer Mode</strong> — Move money between your accounts.
                 This creates <strong>two paired transactions</strong>: a <span className="text-red-600 font-bold">Transfer-Out</span> from the source 
                 and a <span className="text-green-600 font-bold">Transfer-In</span> to the destination, keeping your balances accurate.
@@ -303,15 +303,15 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
             {/* Direction */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Transfer Direction</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Transfer Direction</label>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => { setTransferDirection('bank-to-cash'); setTransferFromAccount(''); setTransferToAccount(''); }}
                   className={`p-4 rounded-xl border-2 text-center font-semibold transition-all duration-200 ${
                     transferDirection === 'bank-to-cash'
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 shadow-md'
+                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:border-gray-300'
                   }`}
                 >
                   <span className="text-2xl block mb-1">🏦 → 💵</span>
@@ -334,8 +334,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   onClick={() => { setTransferDirection('bank-to-bank'); setTransferFromAccount(''); setTransferToAccount(''); }}
                   className={`p-4 rounded-xl border-2 text-center font-semibold transition-all duration-200 ${
                     transferDirection === 'bank-to-bank'
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 shadow-md'
+                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:border-gray-300'
                   }`}
                 >
                   <span className="text-2xl block mb-1">🏦 → 🏦</span>
@@ -348,7 +348,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               {/* Date & Time */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Date</label>
                   <input
                     type="date"
                     name="date"
@@ -358,7 +358,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Time</label>
                   <input
                     type="time"
                     name="time"
@@ -372,7 +372,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               {/* Bank Account - Source */}
               {transferDirection !== 'cash-to-bank' && (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
                     {transferDirection === 'bank-to-bank' ? 'From Bank Account' : 'From Bank Account'}
                   </label>
                   <select
@@ -392,7 +392,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               {/* Bank Account - For cash-to-bank (destination) */}
               {transferDirection === 'cash-to-bank' && (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">To Bank Account</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">To Bank Account</label>
                   <select
                     value={transferFromAccount}
                     onChange={(e) => setTransferFromAccount(e.target.value)}
@@ -410,7 +410,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               {/* Bank Account - Destination (only for bank-to-bank) */}
               {transferDirection === 'bank-to-bank' && (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">To Bank Account</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">To Bank Account</label>
                   <select
                     value={transferToAccount}
                     onChange={(e) => setTransferToAccount(e.target.value)}
@@ -427,7 +427,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Amount */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Amount</label>
                 <input
                   type="number"
                   name="amount"
@@ -442,7 +442,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Currency */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Currency</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Currency</label>
                 <input
                   type="text"
                   name="currency"
@@ -455,7 +455,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
             {/* Note */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Note (optional)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Note (optional)</label>
               <input
                 type="text"
                 name="note"
@@ -467,8 +467,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
             </div>
 
             {/* Visual summary */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <p className="text-sm text-gray-500 font-medium mb-2">Transfer Summary</p>
+            <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
+              <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mb-2">Transfer Summary</p>
               <div className="flex items-center justify-center gap-4 text-lg font-bold">
                 <span className="text-red-500">
                   {transferDirection === 'bank-to-cash' 
@@ -513,7 +513,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
               {/* Date & Time */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Date</label>
                   <input
                     type="date"
                     name="date"
@@ -524,7 +524,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Time</label>
                   <input
                     type="time"
                     name="time"
@@ -537,7 +537,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Type */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">
                   Type
                   <button
                     type="button"
@@ -557,7 +557,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                 </select>
                 {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
                 {showTypeInfo && (
-                  <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
+                  <div className="mt-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-300 space-y-1">
                     <p><strong>Income</strong> — Money received (salary, freelance, gifts)</p>
                     <p><strong>Expense</strong> — Money spent (food, rent, bills)</p>
                     <p><strong>Transfer-Out</strong> — Money leaving an account (e.g., bank withdrawal). Does <em>not</em> count as an expense — it's just moving money elsewhere.</p>
@@ -569,7 +569,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Account Type */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Payment Method</label>
                 <select
                   name="accountType"
                   value={formData.accountType}
@@ -588,16 +588,16 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Account */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Account</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Account</label>
                 {formData.accountType === 'Cash' ? (
-                  <input type="text" readOnly value="Cash" className="input-field bg-gray-100" />
+                  <input type="text" readOnly value="Cash" className="input-field bg-gray-100 dark:bg-slate-700" />
                 ) : (
                   <select
                     name="account"
                     value={formData.account}
                     onChange={handleChange}
                     disabled={!formData.accountType}
-                    className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="input-field disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
                   >
                     <option value="">Select Account</option>
                     {formData.accountType && ACCOUNTS[formData.accountType] && ACCOUNTS[formData.accountType].map((acc) => (
@@ -612,7 +612,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Category</label>
                 {!useCustomCategory ? (
                   <select
                     name="category"
@@ -650,7 +650,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Amount */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Amount</label>
                 <input
                   type="number"
                   name="amount"
@@ -665,7 +665,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
               {/* Currency */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Currency</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Currency</label>
                 <input
                   type="text"
                   name="currency"
@@ -678,7 +678,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
             {/* Note */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Note / Description</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Note / Description</label>
               <input
                 type="text"
                 name="note"
@@ -691,7 +691,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
 
             {/* Full Description */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Details</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Details</label>
               <textarea
                 name="description"
                 value={formData.description}

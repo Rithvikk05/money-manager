@@ -51,6 +51,20 @@ export default function App() {
   const [editingInModal, setEditingInModal] = useState(false)
   const [bulkEditTransactions, setBulkEditTransactions] = useState([])
   const [showBulkEditModal, setShowBulkEditModal] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark'
+  })
+
+  // Apply dark mode class to html element
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }, [darkMode])
 
   useEffect(() => {
     // Check if user is already logged in
@@ -382,108 +396,73 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-[#0B1120]' : 'bg-[#F0F4FF]'}`}>
       {/* Header */}
       <header className="gradient-primary text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 py-5 flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold">💰 Money Manager</h1>
-            <p className="text-gray-100 mt-2">Manage your finances with ease</p>
+            <h1 className="text-3xl font-bold tracking-tight">💰 Money Manager</h1>
+            <p className="text-blue-200 mt-1 text-sm font-medium">Manage your finances with ease</p>
           </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold">Welcome, {user?.username}!</p>
+          <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
             <button
-              onClick={handleLogout}
-              className="mt-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-semibold transition"
+              onClick={() => setDarkMode(!darkMode)}
+              className={`theme-toggle ${darkMode ? 'dark-active' : ''}`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              🚪 Logout
+              <div className="toggle-dot flex items-center justify-center text-xs">
+                {darkMode ? '🌙' : '☀️'}
+              </div>
             </button>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-blue-100">Welcome, {user?.username}!</p>
+              <button
+                onClick={handleLogout}
+                className="mt-1 bg-red-500/20 hover:bg-red-500/40 border border-red-400/30 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200"
+              >
+                🚪 Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 flex gap-4 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'dashboard'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            📊 Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab('add')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'add'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            ➕ Add Transaction
-          </button>
-          <button
-            onClick={() => setActiveTab('transactions')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'transactions'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            📋 All Transactions
-          </button>
-          <button
-            onClick={() => setActiveTab('import-export')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'import-export'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            📤 Import/Export
-          </button>
-          <button
-            onClick={() => setActiveTab('calendar')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'calendar'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            🗓️ Calendar
-          </button>
-          <button
-            onClick={() => setActiveTab('monthly-summary')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'monthly-summary'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            📈 Monthly Summary
-          </button>
-          <button
-            onClick={() => setActiveTab('deleted')}
-            className={`px-4 py-3 font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'deleted'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-blue-600'
-            }`}
-          >
-            🗑️ Deleted Transactions
-          </button>
+      <nav className={`sticky top-0 z-50 shadow-md backdrop-blur-lg transition-colors duration-300 ${darkMode ? 'bg-slate-900/95 border-b border-slate-700/50' : 'bg-white/95 border-b border-gray-100'}`}>
+        <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
+          {[
+            { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+            { id: 'add', icon: '➕', label: 'Add Transaction' },
+            { id: 'transactions', icon: '📋', label: 'All Transactions' },
+            { id: 'import-export', icon: '📤', label: 'Import/Export' },
+            { id: 'calendar', icon: '🗓️', label: 'Calendar' },
+            { id: 'monthly-summary', icon: '📈', label: 'Monthly Summary' },
+            { id: 'deleted', icon: '🗑️', label: 'Deleted' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 font-medium text-sm whitespace-nowrap transition-all duration-200 relative ${
+                activeTab === tab.id
+                  ? `${darkMode ? 'text-blue-400' : 'text-blue-600'} tab-active`
+                  : `${darkMode ? 'text-slate-400 hover:text-blue-400' : 'text-gray-500 hover:text-blue-600'}`
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
       </nav>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {loading && <div className="text-center py-8 text-gray-500">Loading...</div>}
+        {loading && <div className={`text-center py-8 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Loading...</div>}
 
         {!loading && activeTab === 'dashboard' && (
-          <Dashboard transactions={transactions} stats={stats} />
+          <div key="dashboard" className="page-transition">
+            <Dashboard transactions={transactions} stats={stats} />
+          </div>
         )}
 
         {!loading && activeTab === 'add' && (
@@ -537,10 +516,10 @@ export default function App() {
 
       {/* Edit Modal */}
       {editingInModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-800">✏️ Edit Transaction</h2>
+        <div className="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div className={`rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className={`sticky top-0 border-b p-4 flex justify-between items-center rounded-t-xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+              <h2 className={`text-2xl font-bold ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>✏️ Edit Transaction</h2>
               <button
                 onClick={handleCloseModal}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -571,7 +550,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-12 py-6 text-center text-gray-500">
+      <footer className={`border-t mt-12 py-6 text-center transition-colors duration-300 ${darkMode ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-gray-100 text-gray-500'}`}>
         <p>&copy; {new Date().getFullYear()} Money Manager. All rights reserved.</p>
       </footer>
     </div>

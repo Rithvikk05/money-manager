@@ -2,72 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* ── Base transitions for theme switch ── */
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: #F0F4FF;
   min-height: 100vh;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
+.dark body,
+:root.dark body {
+  background: #0B1120;
+}
+
+/* ── Gradient Header ── */
 .gradient-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #1E40AF 100%);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.4);
 }
 
+.dark .gradient-primary {
+  background: linear-gradient(135deg, #0F172A 0%, #162032 50%, #1E293B 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Cards ── */
 .card {
-  @apply bg-white rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-xl border border-gray-100;
+  @apply bg-white rounded-xl shadow-sm p-6 border border-gray-100/80;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
+.dark .card {
+  @apply bg-slate-800 border-slate-700/60;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark .card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Buttons ── */
 .btn-primary {
-  @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+  @apply bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md hover:shadow-lg;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+}
+
+.dark .btn-primary {
+  @apply from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
 .btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+  @apply bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md hover:shadow-lg;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-secondary:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+}
+
+.dark .btn-secondary {
+  @apply bg-slate-700 hover:bg-slate-600;
 }
 
 .btn-danger {
-  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md hover:shadow-lg;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── Input Fields ── */
 .input-field {
-  @apply w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white;
+  @apply w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white;
+  transition: all 0.2s ease;
 }
 
+.dark .input-field {
+  @apply bg-slate-900 border-slate-600 text-slate-100 hover:bg-slate-800;
+}
+
+.dark .input-field::placeholder {
+  color: #64748b;
+}
+
+/* ── Stat Cards ── */
 .stat-card {
-  @apply card bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-600 shadow-md;
+  @apply card bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500 shadow-md;
+}
+
+.dark .stat-card {
+  @apply bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border-blue-400;
 }
 
 .expense-card {
-  @apply card bg-gradient-to-br from-red-50 to-orange-50 border-l-4 border-red-600 shadow-md;
+  @apply card bg-gradient-to-br from-red-50 to-orange-50 border-l-4 border-red-500 shadow-md;
+}
+
+.dark .expense-card {
+  @apply bg-gradient-to-br from-red-900/20 to-orange-900/20 border-red-400;
 }
 
 .income-card {
-  @apply card bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-600 shadow-md;
+  @apply card bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500 shadow-md;
 }
 
-/* Enhanced table styling */
+.dark .income-card {
+  @apply bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-green-400;
+}
+
+/* ── Tables ── */
 table thead th {
-  background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+  background: linear-gradient(135deg, #f1f5f9 0%, #e8ecf1 100%);
   font-weight: 600;
   letter-spacing: 0.5px;
+  transition: background-color 0.3s ease;
+}
+
+.dark table thead th {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #e2e8f0;
 }
 
 table tbody tr {
@@ -75,14 +144,22 @@ table tbody tr {
   transition: background-color 0.2s ease;
 }
 
-table tbody tr:hover {
-  background-color: #f8fafb;
+.dark table tbody tr {
+  border-bottom: 1px solid #334155;
 }
 
-/* Scrollbar styling */
+table tbody tr:hover {
+  background-color: #f0f7ff;
+}
+
+.dark table tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -90,10 +167,88 @@ table tbody tr:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #94a3b8;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ── Page transition animation ── */
+.page-transition {
+  animation: slideUp 0.35s ease-out;
+}
+
+/* ── Tab indicator animation ── */
+.tab-active {
+  position: relative;
+}
+
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 3px;
+  background: linear-gradient(90deg, #3B82F6, #60A5FA);
+  border-radius: 3px 3px 0 0;
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* ── Theme toggle button ── */
+.theme-toggle {
+  @apply relative w-14 h-7 rounded-full cursor-pointer;
+  transition: background-color 0.3s ease;
+  background: #e2e8f0;
+}
+
+.theme-toggle.dark-active {
+  background: #334155;
+}
+
+.theme-toggle .toggle-dot {
+  @apply absolute top-0.5 left-0.5 w-6 h-6 rounded-full shadow-md;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.3s ease;
+  background: white;
+}
+
+.theme-toggle.dark-active .toggle-dot {
+  transform: translateX(28px);
+  background: #1e293b;
+}
+
+/* ── Modal backdrop ── */
+.modal-backdrop {
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Recharts dark mode ── */
+.dark .recharts-cartesian-grid line {
+  stroke: #334155;
+}
+
+.dark .recharts-text {
+  fill: #94a3b8;
+}
+
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
 }

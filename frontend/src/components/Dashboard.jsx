@@ -149,15 +149,15 @@ export default function Dashboard({ transactions, stats }) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="income-card">
-          <p className="text-gray-600 text-sm font-semibold uppercase">Total Income</p>
+          <p className="text-gray-600 dark:text-slate-400 text-sm font-semibold uppercase">Total Income</p>
           <p className="text-3xl font-bold text-green-600 mt-2">₹{totalIncome.toLocaleString('en-IN')}</p>
         </div>
         <div className="expense-card">
-          <p className="text-gray-600 text-sm font-semibold uppercase">Total Expense</p>
+          <p className="text-gray-600 dark:text-slate-400 text-sm font-semibold uppercase">Total Expense</p>
           <p className="text-3xl font-bold text-red-600 mt-2">₹{totalExpense.toLocaleString('en-IN')}</p>
         </div>
         <div className={`stat-card ${balance >= 0 ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-600' : 'bg-gradient-to-br from-orange-50 to-red-50 border-l-4 border-orange-600'}`}>
-          <p className="text-gray-600 text-sm font-semibold uppercase">Net Balance</p>
+          <p className="text-gray-600 dark:text-slate-400 text-sm font-semibold uppercase">Net Balance</p>
           <p className={`text-3xl font-bold mt-2 ${balance >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
             ₹{balance.toLocaleString('en-IN')}
           </p>
@@ -182,7 +182,7 @@ export default function Dashboard({ transactions, stats }) {
               return (
                 <div key={accName} className={`card bg-gradient-to-br border-l-4 ${colorTheme}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-gray-700 text-sm font-semibold uppercase">{accName}</p>
+                    <p className="text-gray-700 dark:text-slate-200 text-sm font-semibold uppercase">{accName}</p>
                     <span className={`text-2xl font-bold ${currentBalance >= 0 ? textTheme : 'text-red-500'}`}>
                       ₹{currentBalance.toLocaleString('en-IN')}
                     </span>
@@ -190,11 +190,11 @@ export default function Dashboard({ transactions, stats }) {
                   {/* Current month activity */}
                   {currentMonth && (
                     <div className={`mt-2 space-y-1 border-t pt-3 text-xs ${isCash ? 'border-emerald-100' : 'border-indigo-100'}`}>
-                      <p className="text-gray-500 font-semibold mb-1">{monthLabel(currentMonth.month)} Activity</p>
+                      <p className="text-gray-500 dark:text-slate-400 font-semibold mb-1">{monthLabel(currentMonth.month)} Activity</p>
                       {currentMonth.opening !== 0 && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">{currentMonth.opening >= 0 ? 'Opening Balance' : 'Opening Debt'}</span>
-                          <span className={`font-semibold ${currentMonth.opening >= 0 ? 'text-gray-700' : 'text-red-600'}`}>
+                          <span className="text-gray-600 dark:text-slate-400">{currentMonth.opening >= 0 ? 'Opening Balance' : 'Opening Debt'}</span>
+                          <span className={`font-semibold ${currentMonth.opening >= 0 ? 'text-gray-700 dark:text-slate-200' : 'text-red-600'}`}>
                             {currentMonth.opening >= 0 ? '' : '-'}₹{Math.abs(currentMonth.opening).toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -216,7 +216,7 @@ export default function Dashboard({ transactions, stats }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly Trend */}
         <div className="card">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">📈 Monthly Trend</h3>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">📈 Monthly Trend</h3>
           {monthlyArray.length > 0 ? (
             <ResponsiveContainer width="100%" height={400}>
               <ComposedChart data={monthlyArray}>
@@ -249,13 +249,13 @@ export default function Dashboard({ transactions, stats }) {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-500">No data available</p>
+            <p className="text-gray-500 dark:text-slate-400">No data available</p>
           )}
         </div>
 
         {/* Category Breakdown */}
         <div className="card">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">🎯 Expenses by Category</h3>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">🎯 Expenses by Category</h3>
           {categoryData.length > 0 ? (
             <div className="flex flex-col items-center justify-center">
               <ResponsiveContainer width="100%" height={categoryData.length > 5 ? categoryData.length * 50 : 300}>
@@ -277,17 +277,17 @@ export default function Dashboard({ transactions, stats }) {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-gray-500">No data available</p>
+            <p className="text-gray-500 dark:text-slate-400">No data available</p>
           )}
         </div>
       </div>
 
       {/* Top Transactions */}
       <div className="card">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">💳 Recent Transactions</h3>
+        <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">💳 Recent Transactions</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 border-b">
+            <thead className="bg-gray-100 dark:bg-slate-700 border-b dark:border-slate-700">
               <tr>
                 <th className="text-left px-4 py-2">Date</th>
                 <th className="text-left px-4 py-2">Account</th>
@@ -299,11 +299,11 @@ export default function Dashboard({ transactions, stats }) {
             </thead>
             <tbody>
               {displayTransactions.slice(0, displayCount).map((t) => (
-                <tr key={t.id} className={`border-b transition-colors ${t.isVirtual ? 'bg-gray-100 italic' : 'hover:bg-gray-50'}`}>
-                  <td className="px-4 py-2 text-gray-700">{formatDate(t.date)}</td>
-                  <td className="px-4 py-2 text-gray-600">{t.account}</td>
+                <tr key={t.id} className={`border-b dark:border-slate-700 transition-colors ${t.isVirtual ? 'bg-gray-100 dark:bg-slate-700 italic' : 'hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                  <td className="px-4 py-2 text-gray-700 dark:text-slate-200">{formatDate(t.date)}</td>
+                  <td className="px-4 py-2 text-gray-600 dark:text-slate-400">{t.account}</td>
                   <td className="px-4 py-2">{t.category}</td>
-                  <td className="px-4 py-2 text-gray-600">{t.note}</td>
+                  <td className="px-4 py-2 text-gray-600 dark:text-slate-400">{t.note}</td>
                   <td className={`px-4 py-2 text-right font-semibold ${
                     t.type === 'Income' || t.type === 'Transfer-In' ? 'text-green-600' : 'text-red-600'
                   }`}>
@@ -316,8 +316,8 @@ export default function Dashboard({ transactions, stats }) {
                         : t.type === 'Transfer-In' ? 'bg-teal-100 text-teal-800'
                         : t.type === 'Transfer-Out' ? 'bg-orange-100 text-orange-800'
                         : t.type === 'Balance-In' ? 'bg-purple-100 text-purple-800'
-                        : t.type === 'Balance-Out' ? 'bg-gray-200 text-gray-800'
-                        : 'bg-blue-100 text-blue-800'
+                        : t.type === 'Balance-Out' ? 'bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-100'
+                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800'
                     }`}>
                       {t.isVirtual ? 'Auto-Balance' : t.type}
                     </span>

@@ -169,10 +169,10 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
 
       {/* Filters */}
       <div className="card">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">🔍 Filters</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-slate-100">🔍 Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Search</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Search</label>
             <input
               type="text"
               placeholder="Search transactions..."
@@ -182,7 +182,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Account Type</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Account Type</label>
             <select value={filterAccountType} onChange={(e) => setFilterAccountType(e.target.value)} className="input-field">
               {uniqueAccounts.map(acc => (
                 <option key={acc} value={acc}>{acc}</option>
@@ -190,7 +190,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Type</label>
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="input-field">
               <option>All</option>
               <option>Income</option>
@@ -202,7 +202,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Category</label>
             <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="input-field">
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
@@ -212,7 +212,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Sort By</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Sort By</label>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="input-field">
               <option value="date-desc">Date (Newest)</option>
               <option value="date-asc">Date (Oldest)</option>
@@ -227,7 +227,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
       <div className="card overflow-x-auto">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-gray-800">📋 Transactions</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">📋 Transactions</h2>
             {selectedIds.size > 0 && typeof onBulkEdit === 'function' && (
               <button 
                 onClick={() => {
@@ -240,7 +240,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
               </button>
             )}
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-slate-300">
             {totalCount > 0 ? (
               <>
                 Showing <strong>{(currentPage - 1) * ITEMS_PER_PAGE + 1}</strong> to <strong>{Math.min(currentPage * ITEMS_PER_PAGE, totalCount)}</strong> of <strong>{totalCount}</strong>
@@ -255,45 +255,45 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
+                <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-700 border-b-2 border-blue-200 dark:border-slate-600">
                   <tr>
                     <th className="px-4 py-3 text-center">
                       <input 
                         type="checkbox" 
                         checked={isAllSelected}
                         onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                        className="rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                       />
                     </th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Date & Time</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Account</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Category</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Note</th>
-                    <th className="text-right px-4 py-3 font-semibold text-gray-700">Amount</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Type</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Actions</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Date & Time</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Account</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Category</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Note</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Amount</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Type</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-700 dark:text-slate-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedData.map((transaction, index) => (
-                    <tr key={transaction.id} className={`border-b transition-colors ${transaction.isVirtual ? 'bg-gray-100 italic' : (index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100')} ${selectedIds.has(transaction.id) ? 'bg-blue-50' : ''}`}>
+                    <tr key={transaction.id} className={`border-b dark:border-slate-700 transition-colors ${transaction.isVirtual ? 'bg-gray-100 dark:bg-slate-700 italic' : (index % 2 === 0 ? 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/50' : 'bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700/50')} ${selectedIds.has(transaction.id) ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}>
                       <td className="px-4 py-3 text-center">
                         {!transaction.isVirtual && (
                           <input 
                             type="checkbox"
                             checked={selectedIds.has(transaction.id)}
                             onChange={(e) => handleSelectOne(e, transaction.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                            className="rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 font-medium">
+                      <td className="px-4 py-3 text-gray-700 dark:text-slate-300 font-medium">
                         {formatDate(transaction.date)}
                         {transaction.time && <div className="text-xs text-gray-400">{transaction.time}</div>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{transaction.account}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-slate-300">{transaction.account}</td>
                       <td className="px-4 py-3">{transaction.category}</td>
-                      <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{transaction.note}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-slate-300 max-w-xs truncate">{transaction.note}</td>
                       <td className={`px-4 py-3 text-right font-bold ${transaction.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
                         ₹{(transaction.amount || 0).toLocaleString('en-IN')}
                       </td>
@@ -310,7 +310,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                                   : transaction.type === 'Balance-In'
                                     ? 'bg-purple-100 text-purple-800'
                                     : transaction.type === 'Balance-Out'
-                                      ? 'bg-gray-200 text-gray-800'
+                                      ? 'bg-gray-200 text-gray-800 dark:bg-slate-600 dark:text-slate-100'
                                       : 'bg-blue-100 text-blue-800'
                         }`}>
                           {transaction.isVirtual ? 'Auto-Balance' : transaction.type}
@@ -346,7 +346,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                  className="px-3 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
                 >
                   ← Previous
                 </button>
@@ -358,7 +358,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                       className={`px-3 py-2 rounded transition-colors ${
                         currentPage === page
                           ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                       }`}
                     >
                       {page}
@@ -368,7 +368,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                  className="px-3 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
                 >
                   Next →
                 </button>
@@ -377,7 +377,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
           </>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No transactions found</p>
+            <p className="text-gray-500 dark:text-slate-400 text-lg">No transactions found</p>
           </div>
         )}
       </div>
