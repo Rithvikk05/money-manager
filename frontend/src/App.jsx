@@ -492,6 +492,7 @@ export default function App() {
             editData={editData}
             initialData={initialData}
             onDelete={handleDelete}
+            transactions={transactions}
             onCancel={() => {
               setEditingId(null)
               setEditData(null)
@@ -553,6 +554,7 @@ export default function App() {
                 editData={editData}
                 onDelete={handleDelete}
                 onCancel={handleCloseModal}
+                transactions={transactions}
               />
             </div>
           </div>

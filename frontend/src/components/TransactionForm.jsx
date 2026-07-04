@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 const ACCOUNTS = {
   'Cash': ['Cash'],
   'Bank (Card)': ['🏦 Kotak Bank', '🏦 Union Bank', '🏦 Other Bank']
 }
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   '🍜 Food',
   '🚖 Transport',
   '🧘🏼 Health',
@@ -32,7 +32,26 @@ const deriveAccountType = (account) => {
   return ''
 }
 
-export default function TransactionForm({ onSubmit, editData, onCancel, initialData, onDelete }) {
+export default function TransactionForm({ onSubmit, editData, onCancel, initialData, onDelete, transactions = [] }) {
+  // Merge default categories with any custom categories found in past transactions
+  const allCategories = useMemo(() => {
+    const defaultSet = new Set(DEFAULT_CATEGORIES.map(c => c.toLowerCase()))
+    const customFromHistory = []
+    if (Array.isArray(transactions)) {
+      const seen = new Set()
+      transactions.forEach(t => {
+        const cat = t?.category
+        if (cat && !defaultSet.has(cat.toLowerCase()) && !seen.has(cat.toLowerCase())) {
+          seen.add(cat.toLowerCase())
+          customFromHistory.push(cat)
+        }
+      })
+    }
+    // Sort custom categories alphabetically, then append after defaults
+    customFromHistory.sort((a, b) => a.localeCompare(b))
+    return [...DEFAULT_CATEGORIES, ...customFromHistory]
+  }, [transactions])
+
   const defaultData = {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
@@ -602,7 +621,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                     className="input-field"
                   >
                     <option value="">Select Category</option>
-                    {CATEGORIES.map((cat) => (
+                    {allCategories.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
