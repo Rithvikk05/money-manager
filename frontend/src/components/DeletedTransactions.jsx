@@ -62,7 +62,7 @@ export default function DeletedTransactions({ deletedTransactions, onRestore, on
     <div className="space-y-6">
       {/* Search and Filters */}
       <div className="card space-y-4">
-        <h3 className="text-lg font-semibold text-gray-700">🔍 Search & Filter</h3>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-200">🔍 Search & Filter</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search */}
@@ -108,7 +108,7 @@ export default function DeletedTransactions({ deletedTransactions, onRestore, on
         </div>
 
         {filtered.length > 0 && (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-slate-300">
             Showing {filtered.length} of {deletedTransactions.length} deleted transactions
           </p>
         )}
@@ -117,35 +117,35 @@ export default function DeletedTransactions({ deletedTransactions, onRestore, on
       {/* Deleted Transactions Table */}
       {filtered.length === 0 ? (
         <div className="card text-center py-12">
-          <p className="text-gray-500 text-lg">✨ No deleted transactions found</p>
+          <p className="text-gray-500 dark:text-slate-400 text-lg">✨ No deleted transactions found</p>
           <p className="text-gray-400 text-sm mt-2">Your deleted transactions will appear here</p>
         </div>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-100 border-b-2 border-gray-300">
+            <thead className="bg-gray-100 dark:bg-slate-700 border-b-2 border-gray-300 dark:border-slate-600">
               <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Account</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Category</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Amount</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Note</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Deleted On</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Date</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Account</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Category</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Type</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Amount</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Note</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-slate-200">Deleted On</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-slate-200">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((transaction, index) => (
                 <tr
                   key={transaction.id}
-                  className={`border-b border-gray-200 hover:bg-gray-50 transition ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                  className={`border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-900 transition ${
+                    index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-gray-50 dark:bg-slate-900'
                   }`}
                 >
-                  <td className="px-6 py-4 text-sm text-gray-800 font-medium">{formatDate(transaction.date)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{transaction.account}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{transaction.category}</td>
+                  <td className="px-6 py-4 text-sm text-gray-800 dark:text-slate-100 font-medium">{formatDate(transaction.date)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">{transaction.account}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">{transaction.category}</td>
                   <td className="px-6 py-4 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -159,13 +159,13 @@ export default function DeletedTransactions({ deletedTransactions, onRestore, on
                       {transaction.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-gray-800">
+                  <td className="px-6 py-4 text-sm font-semibold text-gray-800 dark:text-slate-100">
                     ₹{transaction.amount?.toLocaleString('en-IN') || '0'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={transaction.note}>
+                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300 max-w-xs truncate" title={transaction.note}>
                     {transaction.note || '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                     {formatDeletedDate(transaction.deleted_at)}
                   </td>
                   <td className="px-6 py-4 text-center">

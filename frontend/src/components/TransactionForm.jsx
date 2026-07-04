@@ -311,7 +311,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   className={`p-4 rounded-xl border-2 text-center font-semibold transition-all duration-200 ${
                     transferDirection === 'bank-to-cash'
                       ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 shadow-md'
-                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:border-gray-300'
+                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:border-gray-300 dark:border-slate-600'
                   }`}
                 >
                   <span className="text-2xl block mb-1">🏦 → 💵</span>
@@ -322,8 +322,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   onClick={() => { setTransferDirection('cash-to-bank'); setTransferFromAccount(''); setTransferToAccount(''); }}
                   className={`p-4 rounded-xl border-2 text-center font-semibold transition-all duration-200 ${
                     transferDirection === 'cash-to-bank'
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 shadow-md'
+                      : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:border-gray-300 dark:border-slate-600'
                   }`}
                 >
                   <span className="text-2xl block mb-1">💵 → 🏦</span>
@@ -335,7 +335,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   className={`p-4 rounded-xl border-2 text-center font-semibold transition-all duration-200 ${
                     transferDirection === 'bank-to-bank'
                       ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 shadow-md'
-                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:border-gray-300'
+                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-400 hover:border-gray-300 dark:border-slate-600'
                   }`}
                 >
                   <span className="text-2xl block mb-1">🏦 → 🏦</span>
@@ -597,7 +597,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                     value={formData.account}
                     onChange={handleChange}
                     disabled={!formData.accountType}
-                    className="input-field disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
+                    className="input-field disabled:bg-gray-100 dark:bg-slate-700 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
                   >
                     <option value="">Select Account</option>
                     {formData.accountType && ACCOUNTS[formData.accountType] && ACCOUNTS[formData.accountType].map((acc) => (

@@ -299,7 +299,7 @@ export default function Dashboard({ transactions, stats }) {
             </thead>
             <tbody>
               {displayTransactions.slice(0, displayCount).map((t) => (
-                <tr key={t.id} className={`border-b dark:border-slate-700 transition-colors ${t.isVirtual ? 'bg-gray-100 dark:bg-slate-700 italic' : 'hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                <tr key={t.id} className={`border-b dark:border-slate-700 transition-colors ${t.isVirtual ? 'bg-gray-100 dark:bg-slate-700 italic' : 'hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-900 dark:hover:bg-slate-700'}`}>
                   <td className="px-4 py-2 text-gray-700 dark:text-slate-200">{formatDate(t.date)}</td>
                   <td className="px-4 py-2 text-gray-600 dark:text-slate-400">{t.account}</td>
                   <td className="px-4 py-2">{t.category}</td>

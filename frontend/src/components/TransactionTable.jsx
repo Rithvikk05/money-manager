@@ -255,7 +255,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-700 border-b-2 border-blue-200 dark:border-slate-600">
+                <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-700 border-b-2 border-blue-200 dark:border-blue-700 dark:border-slate-600">
                   <tr>
                     <th className="px-4 py-3 text-center">
                       <input 
@@ -276,7 +276,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                 </thead>
                 <tbody>
                   {paginatedData.map((transaction, index) => (
-                    <tr key={transaction.id} className={`border-b dark:border-slate-700 transition-colors ${transaction.isVirtual ? 'bg-gray-100 dark:bg-slate-700 italic' : (index % 2 === 0 ? 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/50' : 'bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700/50')} ${selectedIds.has(transaction.id) ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}>
+                    <tr key={transaction.id} className={`border-b dark:border-slate-700 transition-colors ${transaction.isVirtual ? 'bg-gray-100 dark:bg-slate-700 italic' : (index % 2 === 0 ? 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-900 dark:hover:bg-slate-700/50' : 'bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700/50')} ${selectedIds.has(transaction.id) ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}>
                       <td className="px-4 py-3 text-center">
                         {!transaction.isVirtual && (
                           <input 
@@ -310,7 +310,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                                   : transaction.type === 'Balance-In'
                                     ? 'bg-purple-100 text-purple-800'
                                     : transaction.type === 'Balance-Out'
-                                      ? 'bg-gray-200 text-gray-800 dark:bg-slate-600 dark:text-slate-100'
+                                      ? 'bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-100 dark:bg-slate-600 dark:text-slate-100'
                                       : 'bg-blue-100 text-blue-800'
                         }`}>
                           {transaction.isVirtual ? 'Auto-Balance' : transaction.type}
@@ -358,7 +358,7 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                       className={`px-3 py-2 rounded transition-colors ${
                         currentPage === page
                           ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                          : 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                       }`}
                     >
                       {page}

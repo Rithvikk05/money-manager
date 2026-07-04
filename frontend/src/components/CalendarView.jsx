@@ -188,7 +188,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
       dayCells.push(
         <div
           key={day}
-          className={`p-2 rounded min-h-[64px] cursor-pointer border transition-colors hover:bg-gray-50 dark:hover:bg-slate-700 ${borderColor}`}
+          className={`p-2 rounded min-h-[64px] cursor-pointer border transition-colors hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-900 dark:hover:bg-slate-700 ${borderColor}`}
           title={dayLabel}
           onClick={() => setSelectedDay(day)}
         >
@@ -391,10 +391,10 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                   cardBgColor = 'bg-purple-50 border-purple-200'
                   badgeColor = 'bg-purple-200 text-purple-800'
                 } else if (isIncome) {
-                  cardBgColor = 'bg-green-50 border-green-300 border-l-4 border-l-green-500'
+                  cardBgColor = 'bg-green-50 dark:bg-green-900/30 border-green-300 border-l-4 border-l-green-500'
                   badgeColor = 'bg-green-200 text-green-800'
                 } else if (isExpense) {
-                  cardBgColor = 'bg-red-50 border-red-300 border-l-4 border-l-red-500'
+                  cardBgColor = 'bg-red-50 dark:bg-red-900/30 border-red-300 border-l-4 border-l-red-500'
                   badgeColor = 'bg-red-200 text-red-800'
                 }
                 

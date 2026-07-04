@@ -85,14 +85,14 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-3xl font-bold text-gray-800">📈 Monthly Summary</h2>
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">📈 Monthly Summary</h2>
               {isLoading && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
                   Syncing...
                 </span>
               )}
             </div>
-            <p className="text-gray-600 mt-2">Track and compare your monthly balance, income, expenses and transfers by account type side-by-side</p>
+            <p className="text-gray-600 dark:text-slate-300 mt-2">Track and compare your monthly balance, income, expenses and transfers by account type side-by-side</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -123,25 +123,25 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
       {/* Unified Table */}
       <div className="card overflow-hidden">
         {unifiedSummaries.length === 0 ? (
-          <p className="text-gray-500 text-center py-12 text-lg">No transactions available to generate monthly summary.</p>
+          <p className="text-gray-500 dark:text-slate-400 text-center py-12 text-lg">No transactions available to generate monthly summary.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
-              <thead className="bg-gradient-to-r from-blue-100 to-blue-50 border-b-2 border-blue-300">
+              <thead className="bg-gradient-to-r from-blue-100 to-blue-50 border-b-2 border-blue-300 dark:border-blue-600">
                 <tr>
-                  <th className="px-6 py-4 text-center font-bold text-gray-700 border-r border-blue-200">Month</th>
-                  <th className="px-6 py-4 text-left font-bold text-gray-700">Account</th>
-                  <th className="px-6 py-4 text-right font-bold text-gray-700">Opening (B/D)</th>
-                  <th className="px-6 py-4 text-right font-bold text-gray-700">Monthly Income</th>
-                  <th className="px-6 py-4 text-right font-bold text-gray-700">Monthly Expenses</th>
-                  <th className="px-6 py-4 text-right font-bold text-gray-700">Net Transfers</th>
-                  <th className="px-6 py-4 text-right font-bold text-gray-700">Closing (C/F)</th>
+                  <th className="px-6 py-4 text-center font-bold text-gray-700 dark:text-slate-200 border-r border-blue-200 dark:border-blue-700">Month</th>
+                  <th className="px-6 py-4 text-left font-bold text-gray-700 dark:text-slate-200">Account</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700 dark:text-slate-200">Opening (B/D)</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700 dark:text-slate-200">Monthly Income</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700 dark:text-slate-200">Monthly Expenses</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700 dark:text-slate-200">Net Transfers</th>
+                  <th className="px-6 py-4 text-right font-bold text-gray-700 dark:text-slate-200">Closing (C/F)</th>
                 </tr>
               </thead>
               <tbody>
                 {unifiedSummaries.map((summary, idx) => {
                   const isEven = idx % 2 === 0
-                  const monthBg = isEven ? 'bg-slate-50' : 'bg-white'
+                  const monthBg = isEven ? 'bg-slate-50' : 'bg-white dark:bg-slate-800'
                   const accountNames = Object.keys(summary.accounts || {}).sort((a, b) => a.localeCompare(b))
                   const rowCount = accountNames.length + 1 // +1 for the Total row
                   
@@ -154,16 +154,16 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                         const colorTheme = isCash ? 'text-emerald-600' : 'text-blue-600'
                         
                         return (
-                          <tr key={`${summary.month}-${accName}`} className={`${monthBg} hover:bg-blue-50/40 transition-colors`}>
+                          <tr key={`${summary.month}-${accName}`} className={`${monthBg} hover:bg-blue-50 dark:bg-blue-900/30/40 transition-colors`}>
                             {accIdx === 0 && (
                               <td 
                                 rowSpan={rowCount} 
-                                className="px-6 py-4 font-bold text-gray-800 border-r border-gray-200 text-center align-middle bg-gradient-to-b from-gray-50/30 to-gray-100/30 text-base"
+                                className="px-6 py-4 font-bold text-gray-800 dark:text-slate-100 border-r border-gray-200 dark:border-slate-700 text-center align-middle bg-gradient-to-b from-gray-50/30 to-gray-100/30 text-base"
                               >
                                 {monthLabel(summary.month)}
                               </td>
                             )}
-                            <td className="px-6 py-4 font-medium text-gray-700">
+                            <td className="px-6 py-4 font-medium text-gray-700 dark:text-slate-200">
                               <span className="mr-2">{icon}</span> {accName}
                             </td>
                             <td className={`px-6 py-4 text-right font-semibold ${colorTheme}`}>
@@ -180,7 +180,7 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                                 {((accData.transferIn || 0) - (accData.transferOut || 0)) >= 0 ? '+' : ''}₹{((accData.transferIn || 0) - (accData.transferOut || 0)).toLocaleString('en-IN')}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-right font-bold text-gray-700">
+                            <td className="px-6 py-4 text-right font-bold text-gray-700 dark:text-slate-200">
                               ₹{(accData.closing || 0).toLocaleString('en-IN')}
                             </td>
                           </tr>
@@ -188,7 +188,7 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                       })}
 
                       {/* Combined Total Row for the Month */}
-                      <tr className="bg-indigo-50/40 hover:bg-indigo-50/80 font-semibold border-b-2 border-indigo-200">
+                      <tr className="bg-indigo-50 dark:bg-indigo-900/30/40 hover:bg-indigo-50 dark:bg-indigo-900/30/80 font-semibold border-b-2 border-indigo-200">
                         <td className="px-6 py-4 font-bold text-indigo-900">
                           <span className="mr-2">💼</span> Total
                         </td>
@@ -221,7 +221,7 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                   const icon = isCash ? '💵' : '🏦'
                   return (
                     <tr key={`grand-total-${accName}`} className="bg-slate-100 font-bold border-t border-slate-200 hover:bg-slate-200 transition-colors">
-                      <td className="px-6 py-4 text-gray-800 text-center" colSpan={2}>
+                      <td className="px-6 py-4 text-gray-800 dark:text-slate-100 text-center" colSpan={2}>
                         <span className="mr-2">{icon}</span> Grand Total - {accName}
                       </td>
                       <td className="px-6 py-4 text-right text-blue-700">₹{totals.opening.toLocaleString('en-IN')}</td>
@@ -232,7 +232,7 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                           {totals.netTransfers >= 0 ? '+' : ''}₹{totals.netTransfers.toLocaleString('en-IN')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-gray-800">₹{totals.closing.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-gray-800 dark:text-slate-100">₹{totals.closing.toLocaleString('en-IN')}</td>
                     </tr>
                   )
                 })}
@@ -260,29 +260,29 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
 
       {bankAccountSummaries.length > 0 && (
         <div className="card overflow-hidden">
-          <h3 className="text-xl font-bold text-gray-800 px-6 py-4 border-b bg-gray-50">🏦 Bank/Card Monthly Summary (Account-wise)</h3>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 px-6 py-4 border-b bg-gray-50 dark:bg-slate-900">🏦 Bank/Card Monthly Summary (Account-wise)</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gradient-to-r from-indigo-100 to-blue-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Account</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Month</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Opening (B/D)</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Income</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Expense</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Closing (C/F)</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-slate-200">Account</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-slate-200">Month</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-200">Opening (B/D)</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-200">Income</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-200">Expense</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-200">Closing (C/F)</th>
                 </tr>
               </thead>
               <tbody>
                 {bankAccountSummaries.flatMap(({ account, summaries }) =>
                   summaries.map((summary, index) => (
-                    <tr key={`${account}-${summary.month}`} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-800 font-semibold">{index === 0 ? account : ''}</td>
-                      <td className="px-4 py-3 text-gray-700">{monthLabel(summary.month)}</td>
+                    <tr key={`${account}-${summary.month}`} className="border-b hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-900">
+                      <td className="px-4 py-3 text-gray-800 dark:text-slate-100 font-semibold">{index === 0 ? account : ''}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{monthLabel(summary.month)}</td>
                       <td className="px-4 py-3 text-right text-blue-700">₹{(summary.opening || 0).toLocaleString('en-IN')}</td>
                       <td className="px-4 py-3 text-right text-green-700">₹{(summary.income || 0).toLocaleString('en-IN')}</td>
                       <td className="px-4 py-3 text-right text-red-700">₹{(summary.expense || 0).toLocaleString('en-IN')}</td>
-                      <td className={`px-4 py-3 text-right font-bold ${(summary.closing || 0) >= 0 ? 'text-gray-800' : 'text-red-700'}`}>₹{(summary.closing || 0).toLocaleString('en-IN')}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${(summary.closing || 0) >= 0 ? 'text-gray-800 dark:text-slate-100' : 'text-red-700'}`}>₹{(summary.closing || 0).toLocaleString('en-IN')}</td>
                     </tr>
                   ))
                 )}

@@ -788,16 +788,16 @@ export default function ImportExport({ onImportSuccess }) {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Import Section */}
       <div className="card">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">📥 Import Transactions</h2>
-        <p className="text-gray-600 mb-4">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-slate-100">📥 Import Transactions</h2>
+        <p className="text-gray-600 dark:text-slate-300 mb-4">
           Upload an Excel file (.xlsx) with your transaction data. Make sure it has columns: Date, Account,
           Category, Note, Amount, Type (Income/Expense)
         </p>
-        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-blue-50">
+        <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-blue-50 dark:bg-blue-900/30">
           <div className="text-center">
             <p className="text-2xl mb-2">📤</p>
-            <p className="font-semibold text-gray-700">Click to select Excel file</p>
-            <p className="text-sm text-gray-500 mt-1">or drag and drop</p>
+            <p className="font-semibold text-gray-700 dark:text-slate-200">Click to select Excel file</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">or drag and drop</p>
           </div>
           <input type="file" accept=".xlsx,.xls" onChange={handleImportFile} className="hidden" />
         </label>
@@ -805,8 +805,8 @@ export default function ImportExport({ onImportSuccess }) {
 
       {/* Export Section */}
       <div className="card shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">📤 Export Transactions</h2>
-        <p className="text-gray-600 mb-6">Export your transactions in different formats depending on your needs:</p>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-slate-100">📤 Export Transactions</h2>
+        <p className="text-gray-600 dark:text-slate-300 mb-6">Export your transactions in different formats depending on your needs:</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button onClick={handleExportBackup} className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transform active:scale-95 transition-all duration-150 flex flex-col items-center justify-center gap-1 h-24 p-2">
@@ -826,8 +826,8 @@ export default function ImportExport({ onImportSuccess }) {
           </button>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
-          <p className="text-sm text-gray-700">
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30/50 border border-blue-100 dark:border-blue-800 rounded-lg">
+          <p className="text-sm text-gray-700 dark:text-slate-200">
             <strong>💡 Tip:</strong> Use <strong>Raw Backup</strong> for safekeeping or moving to another app. Use <strong>Pro Dashboard</strong> for a beautifully formatted spreadsheet ready for presentations.
           </p>
         </div>
@@ -835,12 +835,12 @@ export default function ImportExport({ onImportSuccess }) {
 
       {/* Instructions */}
       <div className="card">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">📋 Import Format Guide</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-slate-100">📋 Import Format Guide</h2>
         <div className="space-y-3 text-sm">
           <p>
             <strong>Required Columns:</strong>
           </p>
-          <ul className="list-disc list-inside space-y-2 text-gray-700">
+          <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-slate-200">
             <li>
               <strong>Date:</strong> Transaction date (YYYY-MM-DD format)
             </li>
