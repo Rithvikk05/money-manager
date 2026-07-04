@@ -150,9 +150,9 @@ export default function DeletedTransactions({ deletedTransactions, onRestore, on
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         transaction.type === 'Income'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800'
                           : transaction.type === 'Expense'
-                          ? 'bg-red-100 text-red-800'
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >

@@ -169,14 +169,14 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                             <td className={`px-6 py-4 text-right font-semibold ${colorTheme}`}>
                               ₹{(accData.opening || 0).toLocaleString('en-IN')}
                             </td>
-                            <td className="px-6 py-4 text-right font-semibold text-green-600">
+                            <td className="px-6 py-4 text-right font-semibold text-green-600 dark:text-green-400">
                               ₹{(accData.income || 0).toLocaleString('en-IN')}
                             </td>
-                            <td className="px-6 py-4 text-right font-semibold text-red-600">
+                            <td className="px-6 py-4 text-right font-semibold text-red-600 dark:text-red-400">
                               ₹{(accData.expense || 0).toLocaleString('en-IN')}
                             </td>
                             <td className="px-6 py-4 text-right font-semibold">
-                              <span className={((accData.transferIn || 0) - (accData.transferOut || 0)) >= 0 ? 'text-teal-600' : 'text-orange-500'}>
+                              <span className={((accData.transferIn || 0) - (accData.transferOut || 0)) >= 0 ? 'text-teal-600 dark:text-teal-400' : 'text-orange-500 dark:text-orange-400'}>
                                 {((accData.transferIn || 0) - (accData.transferOut || 0)) >= 0 ? '+' : ''}₹{((accData.transferIn || 0) - (accData.transferOut || 0)).toLocaleString('en-IN')}
                               </span>
                             </td>
@@ -195,14 +195,14 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                         <td className="px-6 py-4 text-right text-indigo-900">
                           ₹{(summary.total.opening || 0).toLocaleString('en-IN')}
                         </td>
-                        <td className="px-6 py-4 text-right text-green-700">
+                        <td className="px-6 py-4 text-right text-green-700 dark:text-green-400">
                           ₹{(summary.total.income || 0).toLocaleString('en-IN')}
                         </td>
-                        <td className="px-6 py-4 text-right text-red-700">
+                        <td className="px-6 py-4 text-right text-red-700 dark:text-red-400">
                           ₹{(summary.total.expense || 0).toLocaleString('en-IN')}
                         </td>
-                        <td className="px-6 py-4 text-right text-teal-700">
-                          <span className={((summary.total.transferIn || 0) - (summary.total.transferOut || 0)) >= 0 ? 'text-teal-700' : 'text-orange-600'}>
+                        <td className="px-6 py-4 text-right text-teal-700 dark:text-teal-400">
+                          <span className={((summary.total.transferIn || 0) - (summary.total.transferOut || 0)) >= 0 ? 'text-teal-700 dark:text-teal-400' : 'text-orange-600 dark:text-orange-400'}>
                             {((summary.total.transferIn || 0) - (summary.total.transferOut || 0)) >= 0 ? '+' : ''}₹{((summary.total.transferIn || 0) - (summary.total.transferOut || 0)).toLocaleString('en-IN')}
                           </span>
                         </td>
@@ -225,10 +225,10 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                         <span className="mr-2">{icon}</span> Grand Total - {accName}
                       </td>
                       <td className="px-6 py-4 text-right text-blue-700">₹{totals.opening.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-right text-green-700">₹{totals.income.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-right text-red-700">₹{totals.expense.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-green-700 dark:text-green-400">₹{totals.income.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-red-700 dark:text-red-400">₹{totals.expense.toLocaleString('en-IN')}</td>
                       <td className="px-6 py-4 text-right">
-                        <span className={totals.netTransfers >= 0 ? 'text-teal-700' : 'text-orange-600'}>
+                        <span className={totals.netTransfers >= 0 ? 'text-teal-700 dark:text-teal-400' : 'text-orange-600 dark:text-orange-400'}>
                           {totals.netTransfers >= 0 ? '+' : ''}₹{totals.netTransfers.toLocaleString('en-IN')}
                         </span>
                       </td>
@@ -246,7 +246,7 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                   <td className="px-6 py-4 text-right text-green-800">₹{overallTotals.income.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-right text-red-800">₹{overallTotals.expense.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-right">
-                    <span className={overallTotals.netTransfers >= 0 ? 'text-teal-800' : 'text-orange-700'}>
+                    <span className={overallTotals.netTransfers >= 0 ? 'text-teal-800' : 'text-orange-700 dark:text-orange-400'}>
                       {overallTotals.netTransfers >= 0 ? '+' : ''}₹{overallTotals.netTransfers.toLocaleString('en-IN')}
                     </span>
                   </td>
@@ -280,9 +280,9 @@ export default function MonthlySummary({ transactions, onRefresh, isLoading }) {
                       <td className="px-4 py-3 text-gray-800 dark:text-slate-100 font-semibold">{index === 0 ? account : ''}</td>
                       <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{monthLabel(summary.month)}</td>
                       <td className="px-4 py-3 text-right text-blue-700">₹{(summary.opening || 0).toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-3 text-right text-green-700">₹{(summary.income || 0).toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-3 text-right text-red-700">₹{(summary.expense || 0).toLocaleString('en-IN')}</td>
-                      <td className={`px-4 py-3 text-right font-bold ${(summary.closing || 0) >= 0 ? 'text-gray-800 dark:text-slate-100' : 'text-red-700'}`}>₹{(summary.closing || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3 text-right text-green-700 dark:text-green-400">₹{(summary.income || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3 text-right text-red-700 dark:text-red-400">₹{(summary.expense || 0).toLocaleString('en-IN')}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${(summary.closing || 0) >= 0 ? 'text-gray-800 dark:text-slate-100' : 'text-red-700 dark:text-red-400'}`}>₹{(summary.closing || 0).toLocaleString('en-IN')}</td>
                     </tr>
                   ))
                 )}

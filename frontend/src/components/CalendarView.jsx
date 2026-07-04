@@ -134,7 +134,7 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
   const weekdayNodes = []
   for (const weekday of weekdayLabels) {
     weekdayNodes.push(
-      <div key={weekday} className="text-center font-semibold">
+      <div key={weekday} className="text-center font-semibold text-gray-700 dark:text-slate-300">
         {weekday}
       </div>
     )
@@ -203,8 +203,8 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                 nodes.push(
                   <div key={transaction.id} className="truncate">
                     <span className={`mr-1 ${
-                      transaction.isVirtual ? 'text-purple-500 font-bold italic' :
-                      String(transaction.type || '').toLowerCase() === 'income' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
+                      transaction.isVirtual ? 'text-purple-600 dark:text-purple-400 font-bold italic' :
+                      String(transaction.type || '').toLowerCase() === 'income' ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'
                     }`}>
                       ₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                     </span>
@@ -297,13 +297,15 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                 <span>Opening (B/D)</span>
                 <strong>{formatMoney(selectedMonthSummary?.opening || 0)}</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Total Income</span>
-                <strong className="text-green-600">{formatMoney(selectedMonthSummary?.income || 0)}</strong>
+              <div>
+                <span className="text-gray-500 dark:text-slate-400 text-xs font-semibold uppercase">Total Income</span>
+                <br />
+                <strong className="text-green-600 dark:text-green-400">{formatMoney(selectedMonthSummary?.income || 0)}</strong>
               </div>
-              <div className="flex justify-between">
-                <span>Total Expense</span>
-                <strong className="text-red-600">{formatMoney(selectedMonthSummary?.expense || 0)}</strong>
+              <div>
+                <span className="text-gray-500 dark:text-slate-400 text-xs font-semibold uppercase">Total Expense</span>
+                <br />
+                <strong className="text-red-600 dark:text-red-400">{formatMoney(selectedMonthSummary?.expense || 0)}</strong>
               </div>
               <div className="border-t pt-2 flex justify-between">
                 <span>Closing (C/F)</span>
@@ -327,11 +329,11 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                         </div>
                         <div className="flex justify-between text-gray-600 dark:text-slate-300">
                           <span>Income</span>
-                          <span className="font-medium text-green-600">{formatMoney(item.income)}</span>
+                          <span className="font-medium text-green-600 dark:text-green-400">{formatMoney(item.income)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600 dark:text-slate-300">
                           <span>Expense</span>
-                          <span className="font-medium text-red-600">{formatMoney(item.expense)}</span>
+                          <span className="font-medium text-red-600 dark:text-red-400">{formatMoney(item.expense)}</span>
                         </div>
                         <div className="flex justify-between pt-1 mt-1 border-t border-gray-200 dark:border-slate-700">
                           <span className="font-semibold text-gray-700 dark:text-slate-300">Closing (C/F)</span>
@@ -388,36 +390,36 @@ export default function CalendarView({ transactions = [], onEdit, onAddDate, onC
                 let badgeColor = 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100'
                 
                 if (transaction.isVirtual) {
-                  cardBgColor = 'bg-purple-50 border-purple-200'
-                  badgeColor = 'bg-purple-200 text-purple-800'
+                  cardBgColor = 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 border-l-4 border-l-purple-500'
+                  badgeColor = 'bg-purple-200 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
                 } else if (isIncome) {
                   cardBgColor = 'bg-green-50 dark:bg-green-900/30 border-green-300 border-l-4 border-l-green-500'
-                  badgeColor = 'bg-green-200 text-green-800'
+                  badgeColor = 'bg-green-200 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                 } else if (isExpense) {
                   cardBgColor = 'bg-red-50 dark:bg-red-900/30 border-red-300 border-l-4 border-l-red-500'
-                  badgeColor = 'bg-red-200 text-red-800'
+                  badgeColor = 'bg-red-200 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                 }
                 
                 return (
                   <div key={transaction.id} className={`p-3 border rounded-lg flex justify-between items-center transition-colors ${cardBgColor}`}>
                     <div className="flex-1">
-                      <div className={`font-semibold flex items-center gap-2 ${transaction.isVirtual ? 'text-purple-700 italic' : isIncome ? 'text-green-700' : isExpense ? 'text-red-700' : 'text-gray-700 dark:text-slate-300'}`}>
+                      <div className={`font-semibold flex items-center gap-2 ${transaction.isVirtual ? 'text-purple-700 dark:text-purple-400 italic' : isIncome ? 'text-green-700 dark:text-green-400' : isExpense ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-slate-300'}`}>
                         {transaction.time && <span className={`text-xs px-2 py-1 rounded font-medium ${badgeColor}`}>{transaction.time}</span>}
                         <span>{transaction.note || transaction.category || '—'}</span>
                       </div>
-                      <div className={`text-sm mt-1 ${transaction.isVirtual ? 'text-purple-600' : 'text-gray-600 dark:text-slate-300'}`}>
+                      <div className={`text-sm mt-1 ${transaction.isVirtual ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-slate-300'}`}>
                         {transaction.category} • {transaction.account || ''}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 ml-3">
                       <div className="text-right">
-                        <div className={`text-lg font-bold ${isIncome ? 'text-green-600' : isExpense ? 'text-red-600' : 'text-gray-700 dark:text-slate-300'}`}>
+                        <div className={`text-lg font-bold ${isIncome ? 'text-green-600 dark:text-green-400' : isExpense ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-slate-300'}`}>
                           {isIncome ? '+' : isExpense ? '−' : ''}₹{(Number(transaction.amount) || 0).toLocaleString('en-IN')}
                         </div>
                         <div className={`text-xs font-semibold px-2 py-1 rounded mt-1 ${
-                          transaction.isVirtual ? 'bg-purple-100 text-purple-800' :
-                          isIncome ? 'bg-green-100 text-green-800' :
-                          isExpense ? 'bg-red-100 text-red-800' :
+                          transaction.isVirtual ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' :
+                          isIncome ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                          isExpense ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
                           'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100'
                         }`}>
                           {transaction.isVirtual ? 'Auto' : isIncome ? 'Income' : isExpense ? 'Expense' : 'Transfer'}

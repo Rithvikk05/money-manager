@@ -296,8 +296,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">
                 💡 <strong>Transfer Mode</strong> — Move money between your accounts.
-                This creates <strong>two paired transactions</strong>: a <span className="text-red-600 font-bold">Transfer-Out</span> from the source 
-                and a <span className="text-green-600 font-bold">Transfer-In</span> to the destination, keeping your balances accurate.
+                This creates <strong>two paired transactions</strong>: a <span className="text-red-600 dark:text-red-400 font-bold">Transfer-Out</span> from the source 
+                and a <span className="text-green-600 dark:text-green-400 font-bold">Transfer-In</span> to the destination, keeping your balances accurate.
               </p>
             </div>
 
@@ -385,7 +385,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                       <option key={acc} value={acc}>{acc}</option>
                     ))}
                   </select>
-                  {errors.transferFrom && <p className="text-red-500 text-sm mt-1">{errors.transferFrom}</p>}
+                  {errors.transferFrom && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.transferFrom}</p>}
                 </div>
               )}
 
@@ -403,7 +403,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                       <option key={acc} value={acc}>{acc}</option>
                     ))}
                   </select>
-                  {errors.transferFrom && <p className="text-red-500 text-sm mt-1">{errors.transferFrom}</p>}
+                  {errors.transferFrom && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.transferFrom}</p>}
                 </div>
               )}
 
@@ -421,7 +421,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                       <option key={acc} value={acc}>{acc}</option>
                     ))}
                   </select>
-                  {errors.transferTo && <p className="text-red-500 text-sm mt-1">{errors.transferTo}</p>}
+                  {errors.transferTo && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.transferTo}</p>}
                 </div>
               )}
 
@@ -437,7 +437,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   step="0.01"
                   className="input-field"
                 />
-                {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
+                {errors.amount && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.amount}</p>}
               </div>
 
               {/* Currency */}
@@ -470,7 +470,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
             <div className="bg-gray-50 dark:bg-slate-900 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
               <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mb-2">Transfer Summary</p>
               <div className="flex items-center justify-center gap-4 text-lg font-bold">
-                <span className="text-red-500">
+                <span className="text-red-500 dark:text-red-400">
                   {transferDirection === 'bank-to-cash' 
                     ? (transferFromAccount || '🏦 Bank')
                     : transferDirection === 'cash-to-bank'
@@ -478,7 +478,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                       : (transferFromAccount || '🏦 From Bank')}
                 </span>
                 <span className="text-gray-400 text-2xl">→</span>
-                <span className="text-green-500">
+                <span className="text-green-500 dark:text-green-400">
                   {transferDirection === 'bank-to-cash' 
                     ? '💵 Cash' 
                     : transferDirection === 'cash-to-bank'
@@ -521,7 +521,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                     onChange={handleChange}
                     className="input-field"
                   />
-                  {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+                  {errors.date && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.date}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-slate-200 mb-2">Time</label>
@@ -555,7 +555,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                     </option>
                   ))}
                 </select>
-                {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
+                {errors.type && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.type}</p>}
                 {showTypeInfo && (
                   <div className="mt-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-300 space-y-1">
                     <p><strong>Income</strong> — Money received (salary, freelance, gifts)</p>
@@ -583,7 +583,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                     </option>
                   ))}
                 </select>
-                {errors.accountType && <p className="text-red-500 text-sm mt-1">{errors.accountType}</p>}
+                {errors.accountType && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.accountType}</p>}
               </div>
 
               {/* Account */}
@@ -607,7 +607,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                     ))}
                   </select>
                 )}
-                {errors.account && <p className="text-red-500 text-sm mt-1">{errors.account}</p>}
+                {errors.account && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.account}</p>}
               </div>
 
               {/* Category */}
@@ -644,8 +644,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                 >
                   {useCustomCategory ? '📋 Use Predefined' : '✏️ Add Custom'}
                 </button>
-                {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
-                {errors.customCategory && <p className="text-red-500 text-sm mt-1">{errors.customCategory}</p>}
+                {errors.category && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.category}</p>}
+                {errors.customCategory && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.customCategory}</p>}
               </div>
 
               {/* Amount */}
@@ -660,7 +660,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                   step="0.01"
                   className="input-field"
                 />
-                {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
+                {errors.amount && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.amount}</p>}
               </div>
 
               {/* Currency */}

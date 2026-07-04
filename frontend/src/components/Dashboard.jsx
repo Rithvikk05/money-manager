@@ -150,15 +150,15 @@ export default function Dashboard({ transactions, stats }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="income-card">
           <p className="text-gray-600 dark:text-slate-400 text-sm font-semibold uppercase">Total Income</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">₹{totalIncome.toLocaleString('en-IN')}</p>
+          <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">₹{totalIncome.toLocaleString('en-IN')}</p>
         </div>
         <div className="expense-card">
           <p className="text-gray-600 dark:text-slate-400 text-sm font-semibold uppercase">Total Expense</p>
-          <p className="text-3xl font-bold text-red-600 mt-2">₹{totalExpense.toLocaleString('en-IN')}</p>
+          <p className="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">₹{totalExpense.toLocaleString('en-IN')}</p>
         </div>
         <div className={`stat-card ${balance >= 0 ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-600' : 'bg-gradient-to-br from-orange-50 to-red-50 border-l-4 border-orange-600'}`}>
           <p className="text-gray-600 dark:text-slate-400 text-sm font-semibold uppercase">Net Balance</p>
-          <p className={`text-3xl font-bold mt-2 ${balance >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
+          <p className={`text-3xl font-bold mt-2 ${balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
             ₹{balance.toLocaleString('en-IN')}
           </p>
         </div>
@@ -183,7 +183,7 @@ export default function Dashboard({ transactions, stats }) {
                 <div key={accName} className={`card bg-gradient-to-br border-l-4 ${colorTheme}`}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-gray-700 dark:text-slate-200 text-sm font-semibold uppercase">{accName}</p>
-                    <span className={`text-2xl font-bold ${currentBalance >= 0 ? textTheme : 'text-red-500'}`}>
+                    <span className={`text-2xl font-bold ${currentBalance >= 0 ? textTheme : 'text-red-500 dark:text-red-400'}`}>
                       ₹{currentBalance.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -194,15 +194,15 @@ export default function Dashboard({ transactions, stats }) {
                       {currentMonth.opening !== 0 && (
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-slate-400">{currentMonth.opening >= 0 ? 'Opening Balance' : 'Opening Debt'}</span>
-                          <span className={`font-semibold ${currentMonth.opening >= 0 ? 'text-gray-700 dark:text-slate-200' : 'text-red-600'}`}>
+                          <span className={`font-semibold ${currentMonth.opening >= 0 ? 'text-gray-700 dark:text-slate-200' : 'text-red-600 dark:text-red-400'}`}>
                             {currentMonth.opening >= 0 ? '' : '-'}₹{Math.abs(currentMonth.opening).toLocaleString('en-IN')}
                           </span>
                         </div>
                       )}
-                      {currentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600">+ Income</span><span className="font-semibold text-green-600">₹{currentMonth.income.toLocaleString('en-IN')}</span></div>}
-                      {currentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500">− Expense</span><span className="font-semibold text-red-500">₹{currentMonth.expense.toLocaleString('en-IN')}</span></div>}
-                      {currentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600">+ Transfer In</span><span className="font-semibold text-teal-600">₹{currentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
-                      {currentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500">− Transfer Out</span><span className="font-semibold text-orange-500">₹{currentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.income > 0 && <div className="flex justify-between"><span className="text-green-600 dark:text-green-400">+ Income</span><span className="font-semibold text-green-600 dark:text-green-400">₹{currentMonth.income.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.expense > 0 && <div className="flex justify-between"><span className="text-red-500 dark:text-red-400">− Expense</span><span className="font-semibold text-red-500 dark:text-red-400">₹{currentMonth.expense.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.transferIn > 0 && <div className="flex justify-between"><span className="text-teal-600 dark:text-teal-400">+ Transfer In</span><span className="font-semibold text-teal-600 dark:text-teal-400">₹{currentMonth.transferIn.toLocaleString('en-IN')}</span></div>}
+                      {currentMonth.transferOut > 0 && <div className="flex justify-between"><span className="text-orange-500 dark:text-orange-400">− Transfer Out</span><span className="font-semibold text-orange-500 dark:text-orange-400">₹{currentMonth.transferOut.toLocaleString('en-IN')}</span></div>}
                     </div>
                   )}
                 </div>
@@ -305,17 +305,17 @@ export default function Dashboard({ transactions, stats }) {
                   <td className="px-4 py-2">{t.category}</td>
                   <td className="px-4 py-2 text-gray-600 dark:text-slate-400">{t.note}</td>
                   <td className={`px-4 py-2 text-right font-semibold ${
-                    t.type === 'Income' || t.type === 'Transfer-In' ? 'text-green-600' : 'text-red-600'
+                    t.type === 'Income' || t.type === 'Transfer-In' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                   }`}>
                     ₹{(t.amount || 0).toLocaleString('en-IN')}
                   </td>
                   <td className="px-4 py-2 text-center">
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      t.type === 'Income' ? 'bg-green-100 text-green-800'
-                        : t.type === 'Expense' ? 'bg-red-100 text-red-800'
-                        : t.type === 'Transfer-In' ? 'bg-teal-100 text-teal-800'
-                        : t.type === 'Transfer-Out' ? 'bg-orange-100 text-orange-800'
-                        : t.type === 'Balance-In' ? 'bg-purple-100 text-purple-800'
+                      t.type === 'Income' ? 'bg-green-100 dark:bg-green-900/30 text-green-800'
+                        : t.type === 'Expense' ? 'bg-red-100 dark:bg-red-900/30 text-red-800'
+                        : t.type === 'Transfer-In' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-800'
+                        : t.type === 'Transfer-Out' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800'
+                        : t.type === 'Balance-In' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800'
                         : t.type === 'Balance-Out' ? 'bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-100'
                         : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800'
                     }`}>

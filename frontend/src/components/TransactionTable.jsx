@@ -294,21 +294,21 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
                       <td className="px-4 py-3 text-gray-600 dark:text-slate-300">{transaction.account}</td>
                       <td className="px-4 py-3">{transaction.category}</td>
                       <td className="px-4 py-3 text-gray-600 dark:text-slate-300 max-w-xs truncate">{transaction.note}</td>
-                      <td className={`px-4 py-3 text-right font-bold ${transaction.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className={`px-4 py-3 text-right font-bold ${transaction.type === 'Income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         ₹{(transaction.amount || 0).toLocaleString('en-IN')}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           transaction.type === 'Income'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800'
                             : transaction.type === 'Expense'
-                              ? 'bg-red-100 text-red-800'
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-800'
                               : transaction.type === 'Transfer-In'
-                                ? 'bg-teal-100 text-teal-800'
+                                ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-800'
                                 : transaction.type === 'Transfer-Out'
-                                  ? 'bg-orange-100 text-orange-800'
+                                  ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800'
                                   : transaction.type === 'Balance-In'
-                                    ? 'bg-purple-100 text-purple-800'
+                                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800'
                                     : transaction.type === 'Balance-Out'
                                       ? 'bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-100 dark:bg-slate-600 dark:text-slate-100'
                                       : 'bg-blue-100 text-blue-800'
