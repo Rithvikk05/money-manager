@@ -56,6 +56,10 @@ Click "Deploy" - Vercel will automatically deploy on every push to main!
   - MongoDB
   - Firebase Firestore
 
+## Vercel Hobby Limit Note
+
+The API is routed through a consolidated serverless handler so the project stays under the Hobby plan's 12-function limit.
+
 ## Update Backend URL in Frontend
 
 After deploying backend, update in `frontend/src/App.jsx`:

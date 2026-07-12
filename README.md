@@ -131,7 +131,7 @@ The entire application (Frontend + API) is designed to be deployed seamlessly on
    - `JWT_SECRET`: A secure random string for JWT signing.
 6. Click **Deploy**!
 
-Vercel will build the React frontend into static files and deploy everything in the `api/` folder as highly scalable Serverless Functions on the same domain.
+Vercel will build the React frontend into static files and serve the backend through a consolidated serverless router in `api/`, which keeps the deployment within the Hobby plan function limit.
 
 ## 🛠️ Technology Stack
 
