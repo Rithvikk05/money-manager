@@ -93,9 +93,15 @@ export default function App() {
     try {
       setLoading(true)
       const response = await axios.get(`${API_BASE}/transactions`)
-      setTransactions(response.data)
+      if (Array.isArray(response.data)) {
+        setTransactions(response.data)
+      } else {
+        console.error('Expected array for transactions, got:', typeof response.data)
+        setTransactions([])
+      }
     } catch (error) {
       console.error('Error fetching transactions:', error)
+      setTransactions([])
     } finally {
       setLoading(false)
     }
@@ -104,9 +110,15 @@ export default function App() {
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${API_BASE}/statistics`)
-      setStats(response.data)
+      if (Array.isArray(response.data)) {
+        setStats(response.data)
+      } else {
+        console.error('Expected array for stats, got:', typeof response.data)
+        setStats([])
+      }
     } catch (error) {
       console.error('Error fetching stats:', error)
+      setStats([])
     }
   }
 
