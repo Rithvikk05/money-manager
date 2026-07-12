@@ -4,7 +4,9 @@ import { parse } from 'node:url';
 import { createServer as createViteServer } from 'vite';
 import apiHandler from '../api/[...path].js';
 
-const candidatePorts = [Number(process.env.PORT || 0), 5173, 4173, 3000].filter((port) => Number.isFinite(port) && port > 0);
+const candidatePorts = [Number(process.env.PORT || 0), 5173, 5174, 4173, 3000]
+  .filter((port) => Number.isFinite(port) && port > 0)
+  .filter((port, index, ports) => ports.indexOf(port) === index);
 
 async function isPortAvailable(port) {
   return await new Promise((resolve) => {
@@ -19,82 +21,113 @@ async function isPortAvailable(port) {
   });
 }
 
-async function pickPort() {
-  for (const port of candidatePorts) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
+async function createAppServer(port) {
+  const vite = await createViteServer({
+    server: {
+      host: '127.0.0.1',
+      middlewareMode: true,
+      hmr: false,
+    },
+  });
 
-  return 0;
+  const server = http.createServer(async (req, res) => {
+    const parsedUrl = parse(req.url || '/', true);
+    const pathname = parsedUrl.pathname || '/';
+
+    if (pathname.startsWith('/api')) {
+      const pathSegments = pathname.slice(4).split('/').filter(Boolean);
+
+      req.query = {
+        ...parsedUrl.query,
+        path: pathSegments,
+      };
+
+      if (typeof res.status !== 'function') {
+        res.status = function status(code) {
+          res.statusCode = code;
+          return res;
+        };
+      }
+
+      if (typeof res.json !== 'function') {
+        res.json = function json(payload) {
+          if (!res.headersSent) {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          }
+          res.end(JSON.stringify(payload));
+          return res;
+        };
+      }
+
+      if (typeof res.send !== 'function') {
+        res.send = function send(payload) {
+          if (Buffer.isBuffer(payload) || typeof payload === 'string') {
+            res.end(payload);
+          } else {
+            res.end(String(payload));
+          }
+          return res;
+        };
+      }
+
+      await apiHandler(req, res);
+      return;
+    }
+
+    vite.middlewares(req, res, async (err) => {
+      if (err) {
+        vite.ssrFixStacktrace(err);
+        res.statusCode = 500;
+        res.end(err.stack || err.message);
+      }
+    });
+  });
+
+  return { vite, server };
 }
 
-const port = await pickPort();
-
-const vite = await createViteServer({
-  server: {
-    host: '127.0.0.1',
-    middlewareMode: true,
-    hmr: {
-      host: '127.0.0.1',
-      port,
-    },
-  },
-});
-
-const server = http.createServer(async (req, res) => {
-  const parsedUrl = parse(req.url || '/', true);
-  const pathname = parsedUrl.pathname || '/';
-
-  if (pathname.startsWith('/api')) {
-    const pathSegments = pathname.slice(4).split('/').filter(Boolean);
-
-    req.query = {
-      ...parsedUrl.query,
-      path: pathSegments,
-    };
-
-    if (typeof res.status !== 'function') {
-      res.status = function status(code) {
-        res.statusCode = code;
-        return res;
-      };
+async function startServer() {
+  for (const port of candidatePorts) {
+    if (!(await isPortAvailable(port))) {
+      continue;
     }
 
-    if (typeof res.json !== 'function') {
-      res.json = function json(payload) {
-        if (!res.headersSent) {
-          res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        }
-        res.end(JSON.stringify(payload));
-        return res;
-      };
-    }
+    const { vite, server } = await createAppServer(port);
 
-    if (typeof res.send !== 'function') {
-      res.send = function send(payload) {
-        if (Buffer.isBuffer(payload) || typeof payload === 'string') {
-          res.end(payload);
-        } else {
-          res.end(String(payload));
-        }
-        return res;
-      };
-    }
+    try {
+      await new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(port, '127.0.0.1', resolve);
+      });
 
-    await apiHandler(req, res);
-    return;
+      server.removeAllListeners('error');
+      console.log(`Local dev server running at http://localhost:${port}`);
+      return;
+    } catch (error) {
+      server.removeAllListeners('error');
+      await vite.close();
+
+      if (error && error.code === 'EADDRINUSE') {
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  vite.middlewares(req, res, async (err) => {
-    if (err) {
-      vite.ssrFixStacktrace(err);
-      res.statusCode = 500;
-      res.end(err.stack || err.message);
-    }
-  });
-});
+  const { vite, server } = await createAppServer(0);
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`Local dev server running at http://localhost:${port}`);
-});
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+
+  const address = server.address();
+  const actualPort = typeof address === 'object' && address ? address.port : 0;
+  server.removeAllListeners('error');
+  console.log(`Local dev server running at http://localhost:${actualPort}`);
+
+  return { vite, server };
+}
+
+await startServer();
