@@ -448,15 +448,19 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {loading && <div className={`text-center py-8 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Loading...</div>}
+        {loading && (
+          <div className={`mb-6 rounded-xl border px-4 py-3 text-sm font-medium shadow-sm ${darkMode ? 'border-slate-700 bg-slate-800 text-slate-300' : 'border-blue-100 bg-blue-50 text-blue-800'}`}>
+            Loading data...
+          </div>
+        )}
 
-        {!loading && activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && (
           <div key="dashboard" className="page-transition">
             <Dashboard transactions={transactions} stats={stats} />
           </div>
         )}
 
-        {!loading && activeTab === 'add' && (
+        {activeTab === 'add' && (
           <TransactionForm
             onSubmit={handleAddTransaction}
             editData={editData}
@@ -471,7 +475,7 @@ export default function App() {
           />
         )}
 
-        {!loading && activeTab === 'transactions' && (
+        {activeTab === 'transactions' && (
           <TransactionTable
             transactions={transactions}
             onDelete={handleDelete}
@@ -480,7 +484,7 @@ export default function App() {
           />
         )}
 
-        {!loading && activeTab === 'calendar' && (
+        {activeTab === 'calendar' && (
           <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} onCalculateBalances={handleCalculateBalances} />
         )}
 
@@ -492,11 +496,11 @@ export default function App() {
           />
         )}
 
-        {!loading && activeTab === 'import-export' && (
+        {activeTab === 'import-export' && (
           <ImportExport onImportSuccess={handleImportSuccess} />
         )}
 
-        {!loading && activeTab === 'deleted' && (
+        {activeTab === 'deleted' && (
           <DeletedTransactions
             deletedTransactions={deletedTransactions}
             onRestore={handleRestoreTransaction}
