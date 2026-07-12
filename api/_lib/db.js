@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
 let cached = global._mongooseCache;
 if (!cached) {
   cached = global._mongooseCache = { conn: null, promise: null };
 }
 
 export async function connectDB() {
+  const MONGODB_URI = process.env.MONGODB_URI;
+
   if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable');
   }
