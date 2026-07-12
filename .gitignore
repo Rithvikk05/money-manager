@@ -1,6 +1,8 @@
 node_modules/
 .env
+.env.local
 *.db
+*.sqlite
 .DS_Store
 dist/
 build/
@@ -8,4 +10,4 @@ uploads/
 .vscode/
 .idea/
 *.log
-
+.vercel/

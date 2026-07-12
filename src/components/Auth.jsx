@@ -1,16 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 
-const getApiBase = () => {
-  if (import.meta.env.DEV) return 'http://localhost:5000/api'
-  if (!import.meta.env.VITE_API_BASE) return 'http://localhost:5000/api'
-  let base = import.meta.env.VITE_API_BASE.trim()
-  if (!base.startsWith('http')) base = `https://${base}`
-  if (base.endsWith('/')) base = base.slice(0, -1)
-  if (!base.endsWith('/api')) base = `${base}/api`
-  return base
-}
-const API_BASE = getApiBase()
+const API_BASE = '/api'
 
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true)
