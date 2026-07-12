@@ -23,8 +23,10 @@ Server running on http://localhost:5000 with SQLite
 ```bash
 cd frontend
 npm install
-npm run dev  # Start frontend on port 3000
+npm run dev  # Start the full local stack on port 3000
 ```
+
+If you only want the React app without API routes, use `npm run dev:frontend`.
 
 ## Testing the Fixes
 

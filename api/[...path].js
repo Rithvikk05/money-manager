@@ -12,6 +12,23 @@ export const config = {
 };
 
 function getRouteParts(req) {
+  const requestUrl = req.url || '/';
+
+  try {
+    const parsedUrl = new URL(requestUrl, 'http://localhost');
+    const pathname = parsedUrl.pathname || '/';
+
+    if (pathname === '/api' || pathname === '/api/') {
+      return [];
+    }
+
+    if (pathname.startsWith('/api/')) {
+      return pathname.slice('/api/'.length).split('/').filter(Boolean);
+    }
+  } catch {
+    // Fall through to req.query below.
+  }
+
   const { path } = req.query || {};
 
   if (Array.isArray(path)) {

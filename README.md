@@ -49,17 +49,16 @@ A modern, full-stack web application for personal money management with comprehe
 
 4. **Start development server**
    
-   **Option A: Using Vercel CLI (Recommended)**
-   This runs both the React frontend and the Serverless API routes exactly like production.
+   **Option A: Full Local Stack (Recommended)**
+   This runs both the React frontend and the API routes in one local server.
    ```bash
-   npm i -g vercel
-   vercel dev
+   npm run dev
    ```
-   
+
    **Option B: Frontend Only**
    If you only want to work on the React app (API calls will fail unless pointing to a remote server):
    ```bash
-   npm run dev
+   npm run dev:frontend
    ```
 
 ## 📱 Project Structure
