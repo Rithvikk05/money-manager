@@ -14,7 +14,14 @@
 - **Install Command**: `npm install`
 
 ### Step 3: Environment Variables
-Add in Vercel dashboard:
+Add these in the Vercel dashboard under Project Settings > Environment Variables:
+```
+MONGODB_URI=mongodb+srv://your_user:your_password@cluster0.example.mongodb.net/money_manager?appName=Cluster0
+JWT_SECRET=replace_with_a_long_random_secret
+```
+
+If you also need a frontend-only API base for a separate backend, add:
+
 ```
 VITE_API_BASE=https://your-backend-url/api
 ```

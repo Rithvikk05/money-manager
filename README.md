@@ -128,6 +128,7 @@ The entire application (Frontend + API) is designed to be deployed seamlessly on
 5. Open the **Environment Variables** section and add:
    - `MONGODB_URI`: Your MongoDB connection string.
    - `JWT_SECRET`: A secure random string for JWT signing.
+   - If you run a separate frontend against another backend, optionally add `VITE_API_BASE` too.
 6. Click **Deploy**!
 
 Vercel will build the React frontend into static files and serve the backend through a consolidated serverless router in `api/`, which keeps the deployment within the Hobby plan function limit.
