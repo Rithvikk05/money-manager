@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = 'mongodb+srv://cherrurith_db_user:7aEGTOEp2uV2WmEy@cluster0.koimmgf.mongodb.net/money_manager?appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/money_manager';
 
 // Schemas
 const transactionSchema = new mongoose.Schema({
