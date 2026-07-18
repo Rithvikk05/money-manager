@@ -8,6 +8,18 @@ This update addresses the critical Excel import error and adds a complete user a
 
 ---
 
+## 🔒 Recent Security Patch & Documentation Updates
+
+### Security Enhancements
+- **Removed Hardcoded Credentials:** Removed hardcoded MongoDB URI from the demo reset script (`scripts/reset-demo-data.js`) and replaced it with environment variable parsing (`.env.local`).
+- **Account Cleanup:** Implemented a targeted cleanup script to delete all non-demo user accounts and their associated transactions, mitigating risks from a leaked demo password.
+
+### Documentation Hardening
+- **Security Warnings:** Added strict `<CAUTION>` alerts across all documentation (`README.md`, `DEPLOYMENT.md`, `AUTHENTICATION.md`, `TESTING.md`, `GITHUB_SETUP.md`) enforcing the necessity of keeping `.env` and `.env.local` out of version control.
+- **Environment Example:** Updated `.env.example` with explicit warnings to use only placeholder values for `MONGODB_URI` and `JWT_SECRET`.
+
+---
+
 ## 🔴 Issue 1: Excel Import Error - RESOLVED ✅
 
 ### The Problem
