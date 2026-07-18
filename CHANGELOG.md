@@ -20,6 +20,30 @@ This update addresses the critical Excel import error and adds a complete user a
 
 ---
 
+## 🚀 Recent Features & Architecture Migrations (From Git History)
+
+### ☁️ Architecture & Vercel Migration
+- **Serverless API Routes:** Migrated the entire application from a traditional Express backend (Railway) to Vercel Serverless Functions (`/api/*`).
+- **MongoDB Integration:** Fully migrated the primary database to MongoDB Atlas, supporting seamless serverless connections.
+- **Environment & Routing Fixes:** Resolved Vercel routing issues, implemented fallback ports for the dev server, and fixed JWT secret loading in serverless environments.
+
+### 🎨 UI & Dark Mode Enhancements
+- **Complete Dark Mode:** Implemented a full dark/light theme toggle with comprehensive styling across all components, explicitly fixing text and background colors for visibility.
+- **Dashboard Navigation:** Dashboard category charts are now clickable, redirecting directly to filtered transaction views.
+- **Customization:** Fixed custom bank account names display across the app.
+
+### 📊 Advanced Excel Export
+- **Pro Dashboard Export:** Added a professional 4-sheet Excel export feature using `exceljs`, generating KPI cards, account breakdowns, category analysis, top expenses, autofilters, and conditional formatting.
+- **Category Export:** Added the ability to export transactions based on specific categories.
+
+### ⚡ Performance & Data Management
+- **Bulk Operations:** Implemented bulk create and delete endpoints to vastly improve sync and calculation speeds.
+- **Balance Calculations Fix:** Corrected closing and opening balance calculations by processing individual accounts instead of grouping them, preventing double-counting.
+- **Smart Categories:** The app now automatically learns custom categories from your transaction history and adds them to the dropdowns.
+- **Demo Reset Script:** Added (and securely hardened) a script to reset the demo account with randomized transactions.
+
+---
+
 ## 🔴 Issue 1: Excel Import Error - RESOLVED ✅
 
 ### The Problem
