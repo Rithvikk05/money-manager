@@ -518,7 +518,7 @@ export default function App() {
         )}
 
         {activeTab === 'import-export' && (
-          <ImportExport onImportSuccess={handleImportSuccess} />
+          <ImportExport onImportSuccess={handleImportSuccess} transactions={transactions} />
         )}
 
         {activeTab === 'deleted' && (

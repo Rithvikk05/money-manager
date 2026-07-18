@@ -612,7 +612,12 @@ async function handleExportExcel(req, res) {
   await connectDB();
 
   try {
-    const transactions = await Transaction.find({ userId }).sort({ date: -1 });
+    const { category } = req.query || {};
+    const query = { userId };
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+    const transactions = await Transaction.find(query).sort({ date: -1 });
 
     const rows = transactions.map((tx) => ({
       date: tx.date,

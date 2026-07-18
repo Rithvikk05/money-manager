@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from 'react'
 import axios from 'axios'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
@@ -25,7 +26,13 @@ const formatDisplayDate = (value) => {
   return escapeHtml(date.toLocaleDateString('en-IN'))
 }
 
-export default function ImportExport({ onImportSuccess }) {
+export default function ImportExport({ onImportSuccess, transactions = [] }) {
+  const [exportCategory, setExportCategory] = useState('All')
+
+  const uniqueCategories = useMemo(() => {
+    const cats = new Set(transactions.map(t => t.category).filter(Boolean))
+    return ['All', ...Array.from(cats).sort()]
+  }, [transactions])
   const handleImportFile = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -49,6 +56,7 @@ export default function ImportExport({ onImportSuccess }) {
   const handleExportBackup = async () => {
     try {
       const response = await axios.get(`${API_BASE}/export/excel`, {
+        params: { category: exportCategory },
         responseType: 'blob',
       })
       const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -67,7 +75,10 @@ export default function ImportExport({ onImportSuccess }) {
   const handleExportPresentation = async () => {
     try {
       const response = await axios.get(`${API_BASE}/transactions`)
-      const transactions = Array.isArray(response.data) ? response.data : []
+      const allTxs = Array.isArray(response.data) ? response.data : []
+      const transactions = exportCategory === 'All' 
+        ? allTxs 
+        : allTxs.filter(t => t.category === exportCategory)
 
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'Money Manager Pro'
@@ -619,7 +630,11 @@ export default function ImportExport({ onImportSuccess }) {
   const handleExportHTML = async () => {
     try {
       const response = await axios.get(`${API_BASE}/transactions`)
-      const transactions = Array.isArray(response.data) ? response.data : []
+      const allTxs = Array.isArray(response.data) ? response.data : []
+      const transactions = exportCategory === 'All' 
+        ? allTxs 
+        : allTxs.filter(t => t.category === exportCategory)
+
       const monthlySummaries = getMonthlyBalanceSummaries(transactions)
       const accountMonthlySummaries = Array.from(new Set(transactions.map((t) => t?.account).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b))
@@ -796,7 +811,21 @@ export default function ImportExport({ onImportSuccess }) {
 
       {/* Export Section */}
       <div className="card shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-slate-100">📤 Export Transactions</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">📤 Export Transactions</h2>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-gray-700 dark:text-slate-300 whitespace-nowrap">Filter by Category:</label>
+            <select 
+              value={exportCategory}
+              onChange={(e) => setExportCategory(e.target.value)}
+              className="input-field py-1.5 px-3 min-w-[150px]"
+            >
+              {uniqueCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <p className="text-gray-600 dark:text-slate-300 mb-6">Export your transactions in different formats depending on your needs:</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
