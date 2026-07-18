@@ -1,95 +1,50 @@
 # Deployment Guide
 
-## Vercel Deployment (Frontend)
+Money Manager is built to be deployed seamlessly as a single full-stack application on **Vercel**, utilizing **Serverless API Routes** and a **MongoDB Atlas** database.
+
+## Vercel Deployment (Full Stack)
 
 ### Step 1: Connect GitHub to Vercel
 1. Go to https://vercel.com
-2. Sign in with GitHub
-3. Click "New Project"
-4. Select your `money-manager` repository
+2. Sign in with your GitHub account.
+3. Click "Add New..." and select "Project".
+4. Select your `money-manager` repository from the list.
 
 ### Step 2: Configure Build Settings
-- **Build Command**: `npm run build --prefix frontend`
-- **Output Directory**: `frontend/dist`
+Since the project is now a unified full-stack Vercel app, the default settings work perfectly:
+- **Framework Preset**: Vite
+- **Root Directory**: `./` (Leave default)
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
 - **Install Command**: `npm install`
 
 ### Step 3: Environment Variables
-Add these in the Vercel dashboard under Project Settings > Environment Variables:
+Before clicking deploy, expand the **Environment Variables** section and add the following keys:
+
 ```
 MONGODB_URI=mongodb+srv://your_user:your_password@cluster0.example.mongodb.net/money_manager?appName=Cluster0
 JWT_SECRET=replace_with_a_long_random_secret
 ```
+
 > [!CAUTION]
-> **SECURITY WARNING:** NEVER commit real credentials to GitHub. Your `.env.local` is ignored by git for this reason. Do not put real passwords in markdown documentation or data scripts.
-
-If you also need a frontend-only API base for a separate backend, add:
-
-```
-VITE_API_BASE=https://your-backend-url/api
-```
+> **SECURITY WARNING:** NEVER commit real credentials to GitHub. Your `.env.local` is ignored by git for this reason. Ensure you only input real database passwords directly into the Vercel dashboard.
 
 ### Step 4: Deploy
-Click "Deploy" - Vercel will automatically deploy on every push to main!
+Click **Deploy**! 
 
-## Backend Deployment Options
+Vercel will now automatically:
+1. Build your Vite React frontend.
+2. Configure your serverless backend endpoints located in the `api/` folder.
+3. Set up the routes based on your `vercel.json` configuration.
 
-### Option 1: Railway (Recommended)
-1. Go to https://railway.app
-2. Create new project
-3. Connect GitHub
-4. Select money-manager repo
-5. Select `backend` as root directory
-6. Add environment variables (PORT, etc.)
-7. Deploy!
+Vercel will automatically redeploy whenever you push changes to your `main` branch.
 
-### Option 2: Heroku
-1. Install Heroku CLI
-2. Run: `heroku create money-manager-api`
-3. Push to Heroku: `git push heroku main`
-4. View logs: `heroku logs --tail`
+Your Money Manager is now live! 🚀
 
-### Option 3: Render
-1. Go to https://render.com
-2. Create new Web Service
-3. Connect GitHub
-4. Select repository
-5. Build: `npm install`
-6. Start: `npm start`
-7. Deploy!
+## Custom Domain (Optional)
 
-## Database Considerations
-
-- SQLite works for small deployments
-- For production, consider:
-  - PostgreSQL
-  - MongoDB
-  - Firebase Firestore
-
-## Vercel Hobby Limit Note
-
-The API is routed through a consolidated serverless handler so the project stays under the Hobby plan's 12-function limit.
-
-## Update Backend URL in Frontend
-
-After deploying backend, update in `frontend/src/App.jsx`:
-
-```javascript
-const API_BASE = 'https://your-backend-url/api'
-```
-
-Or use environment variable:
-
-```javascript
-const API_BASE = import.meta.env.VITE_API_BASE
-```
-
-## Custom Domain
-
-1. Purchase domain (Namecheap, GoDaddy, etc.)
-2. In Vercel: Add domain in project settings
-3. Follow DNS configuration instructions
-4. Wait for SSL certificate (usually instant)
-
----
-
-**You're all set! Your Money Manager is live! 🚀**
+1. Purchase a domain from your preferred registrar (Namecheap, GoDaddy, etc.).
+2. Go to your Vercel Project Settings > Domains.
+3. Enter your domain name and click Add.
+4. Follow the DNS configuration instructions provided by Vercel to point your domain to their servers.
+5. Vercel will automatically provision a free SSL certificate for you.
