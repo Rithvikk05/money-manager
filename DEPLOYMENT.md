@@ -19,6 +19,8 @@ Add these in the Vercel dashboard under Project Settings > Environment Variables
 MONGODB_URI=mongodb+srv://your_user:your_password@cluster0.example.mongodb.net/money_manager?appName=Cluster0
 JWT_SECRET=replace_with_a_long_random_secret
 ```
+> [!CAUTION]
+> **SECURITY WARNING:** NEVER commit real credentials to GitHub. Your `.env.local` is ignored by git for this reason. Do not put real passwords in markdown documentation or data scripts.
 
 If you also need a frontend-only API base for a separate backend, add:
 

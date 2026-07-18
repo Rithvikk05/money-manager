@@ -46,6 +46,8 @@ A modern, full-stack web application for personal money management with comprehe
    # JWT Secret for signing auth tokens
    JWT_SECRET=your_super_secret_jwt_key_here
    ```
+   > [!CAUTION]
+   > **SECURITY WARNING:** NEVER commit your `.env.local` file or hardcode real passwords and secrets into any script (like data reset scripts). Always use environment variables (`process.env.MONGODB_URI`). If you accidentally push a secret to GitHub, it is considered compromised and you must change the password immediately.
 
 4. **Start development server**
    
