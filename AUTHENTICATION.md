@@ -164,6 +164,8 @@ MONGODB_URI=your_mongodb_connection_string  # For MongoDB
 JWT_SECRET=your_secret_key_change_in_production
 PORT=5000
 ```
+> [!CAUTION]
+> **SECURITY WARNING:** NEVER commit your `.env` or `.env.local` file to version control. Do not hardcode real database credentials or JWT secrets into your application code, test scripts, or documentation.
 
 **Testing with curl:**
 ```bash

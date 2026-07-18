@@ -4,6 +4,9 @@
 - Node.js installed
 - MongoDB URI or using SQLite (default)
 
+> [!CAUTION]
+> **SECURITY WARNING:** NEVER commit your `.env` or `.env.local` file to version control. Do not hardcode real database credentials or JWT secrets into your application code, test scripts, or documentation.
+
 ## Setup Steps
 
 ### 1. Backend Setup

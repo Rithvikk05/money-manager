@@ -2,6 +2,9 @@
 
 Your Money Manager project is ready to push to GitHub!
 
+> [!CAUTION]
+> **SECURITY WARNING:** Before pushing to GitHub, make absolutely sure that your `.env` or `.env.local` files are ignored in your `.gitignore`, and that you have not hardcoded real database credentials or JWT secrets into any scripts or documentation.
+
 ## Step 1: Create New Repository on GitHub
 
 1. Go to https://github.com/new

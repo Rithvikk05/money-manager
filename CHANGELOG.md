@@ -3,6 +3,9 @@
 ## Overview
 This update addresses the critical Excel import error and adds a complete user authentication system.
 
+> [!CAUTION]
+> **SECURITY WARNING:** NEVER commit your `.env` or `.env.local` file to version control. Do not hardcode real database credentials or JWT secrets into your application code, test scripts, or documentation.
+
 ---
 
 ## 🔴 Issue 1: Excel Import Error - RESOLVED ✅
