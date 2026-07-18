@@ -47,7 +47,7 @@ const isCashAccount = (account) => {
   return account === 'Cash'
 }
 
-export default function Dashboard({ transactions, stats }) {
+export default function Dashboard({ transactions, stats, onCategoryClick }) {
   const [displayCount, setDisplayCount] = useState(10)
   const dashboardRef = useRef(null)
 
@@ -268,7 +268,17 @@ export default function Dashboard({ transactions, stats }) {
                     cursor={{fill: 'rgba(200, 200, 200, 0.2)'}}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
                   />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
+                  <Bar 
+                    dataKey="value" 
+                    radius={[0, 4, 4, 0]} 
+                    barSize={24}
+                    onClick={(data) => {
+                      if (onCategoryClick && data && data.name) {
+                        onCategoryClick(data.name)
+                      }
+                    }}
+                    style={{ cursor: onCategoryClick ? 'pointer' : 'default' }}
+                  >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}

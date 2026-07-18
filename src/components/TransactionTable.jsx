@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 
 const ITEMS_PER_PAGE = 50
 
-export default function TransactionTable({ transactions, onDelete, onEdit, onBulkEdit }) {
+export default function TransactionTable({ transactions, onDelete, onEdit, onBulkEdit, initialFilter }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterType, setFilterType] = useState('All')
@@ -22,6 +22,16 @@ export default function TransactionTable({ transactions, onDelete, onEdit, onBul
     }, 300)
     return () => clearTimeout(searchTimeout.current)
   }, [searchTerm])
+
+  useEffect(() => {
+    if (initialFilter) {
+      if (initialFilter.category) setFilterCategory(initialFilter.category)
+      if (initialFilter.sortBy) setSortBy(initialFilter.sortBy)
+      setFilterType('All')
+      setFilterAccountType('All')
+      setSearchTerm('')
+    }
+  }, [initialFilter])
 
   // Memoize date parsing to avoid recomputation
   const parseDate = useCallback((dateString) => {

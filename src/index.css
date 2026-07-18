@@ -91,7 +91,7 @@ body {
 
 /* ── Input Fields ── */
 .input-field {
-  @apply w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white;
+  @apply w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 hover:bg-white text-slate-900;
   transition: all 0.2s ease;
 }
 
@@ -101,6 +101,12 @@ body {
 
 .dark .input-field::placeholder {
   color: #64748b;
+}
+
+/* Fix for select options text visibility in dark mode across browsers */
+.dark select.input-field option {
+  background-color: #0f172a; /* slate-950 */
+  color: #f1f5f9; /* slate-100 */
 }
 
 /* ── Stat Cards ── */

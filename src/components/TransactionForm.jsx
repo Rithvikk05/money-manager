@@ -59,6 +59,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
     account: '',
     category: '',
     customCategory: '',
+    customAccount: '',
     note: '',
     amount: '',
     currency: 'INR',
@@ -83,6 +84,7 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
   const [formData, setFormData] = useState(buildInitialFormData)
   const [errors, setErrors] = useState({})
   const [useCustomCategory, setUseCustomCategory] = useState(false)
+  const [useCustomAccount, setUseCustomAccount] = useState(false)
   const [showTransferMode, setShowTransferMode] = useState(false)
   const [transferDirection, setTransferDirection] = useState('bank-to-cash') // 'bank-to-cash', 'cash-to-bank', or 'bank-to-bank'
   const [transferFromAccount, setTransferFromAccount] = useState('')
@@ -117,7 +119,8 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
     } else {
       if (!formData.date) newErrors.date = 'Date is required'
       if (!formData.accountType) newErrors.accountType = 'Account Type is required'
-      if (!formData.account) newErrors.account = 'Account is required'
+      if (!formData.account && !useCustomAccount) newErrors.account = 'Account is required'
+      if (useCustomAccount && !formData.customAccount) newErrors.customAccount = 'Custom account name is required'
       if (!formData.category && !useCustomCategory) newErrors.category = 'Category is required'
       if (useCustomCategory && !formData.customCategory) newErrors.customCategory = 'Custom category is required'
       if (!formData.amount || formData.amount <= 0) newErrors.amount = 'Amount must be greater than 0'
@@ -150,10 +153,12 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
       const finalData = {
         ...formData,
         category: useCustomCategory ? formData.customCategory : formData.category,
+        account: formData.accountType === 'Bank (Card)' && useCustomAccount ? formData.customAccount : formData.account,
       }
       onSubmit(finalData)
       setFormData(initialData ? { ...defaultData, ...initialData } : defaultData)
       setUseCustomCategory(false)
+      setUseCustomAccount(false)
       alert(editData ? 'Transaction updated!' : 'Transaction added successfully!')
     }
   }
@@ -592,22 +597,64 @@ export default function TransactionForm({ onSubmit, editData, onCancel, initialD
                 {formData.accountType === 'Cash' ? (
                   <input type="text" readOnly value="Cash" className="input-field bg-gray-100 dark:bg-slate-700" />
                 ) : (
-                  <select
-                    name="account"
-                    value={formData.account}
-                    onChange={handleChange}
-                    disabled={!formData.accountType}
-                    className="input-field disabled:bg-gray-100 dark:bg-slate-700 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select Account</option>
-                    {formData.accountType && ACCOUNTS[formData.accountType] && ACCOUNTS[formData.accountType].map((acc) => (
-                      <option key={acc} value={acc}>
-                        {acc}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    {!useCustomAccount ? (
+                      <select
+                        name="account"
+                        value={formData.account}
+                        onChange={handleChange}
+                        disabled={!formData.accountType}
+                        className="input-field disabled:bg-gray-100 dark:bg-slate-700 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Select Account</option>
+                        {formData.accountType && (function() {
+                          // Extract custom banks from transactions
+                          const defaults = ACCOUNTS[formData.accountType] || []
+                          if (formData.accountType !== 'Bank (Card)') return defaults
+                          
+                          const defaultSet = new Set(defaults.map(a => a.toLowerCase()))
+                          const customBanks = []
+                          if (Array.isArray(transactions)) {
+                            const seen = new Set()
+                            transactions.forEach(t => {
+                              const acc = t?.account
+                              if (acc && deriveAccountType(acc) === 'Bank (Card)' && !defaultSet.has(acc.toLowerCase()) && !seen.has(acc.toLowerCase())) {
+                                seen.add(acc.toLowerCase())
+                                customBanks.push(acc)
+                              }
+                            })
+                          }
+                          customBanks.sort((a, b) => a.localeCompare(b))
+                          return [...defaults, ...customBanks]
+                        })().map((acc) => (
+                          <option key={acc} value={acc}>
+                            {acc}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        name="customAccount"
+                        value={formData.customAccount}
+                        onChange={handleChange}
+                        placeholder="Enter custom bank name..."
+                        className="input-field"
+                      />
+                    )}
+                    {formData.accountType === 'Bank (Card)' && (
+                      <button
+                        type="button"
+                        onClick={() => setUseCustomAccount(!useCustomAccount)}
+                        className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-semibold block"
+                      >
+                        {useCustomAccount ? '📋 Use Predefined' : '✏️ Add Custom Bank'}
+                      </button>
+                    )}
+                  </>
                 )}
                 {errors.account && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.account}</p>}
+                {errors.customAccount && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.customAccount}</p>}
               </div>
 
               {/* Category */}

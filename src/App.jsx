@@ -45,6 +45,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark'
   })
+  const [transactionsFilter, setTransactionsFilter] = useState(null)
 
   // Apply dark mode class to html element
   useEffect(() => {
@@ -387,6 +388,11 @@ export default function App() {
     }
   }
 
+  const handleCategoryClick = (category) => {
+    setTransactionsFilter({ category, sortBy: 'date-desc' })
+    setActiveTab('transactions')
+  }
+
   const handleImportSuccess = () => {
     fetchTransactions()
     fetchDeletedTransactions()
@@ -468,7 +474,7 @@ export default function App() {
 
         {activeTab === 'dashboard' && (
           <div key="dashboard" className="page-transition">
-            <Dashboard transactions={transactions} stats={stats} />
+            <Dashboard transactions={transactions} stats={stats} onCategoryClick={handleCategoryClick} />
           </div>
         )}
 
@@ -488,14 +494,17 @@ export default function App() {
         )}
 
         {activeTab === 'transactions' && (
-          <TransactionTable
-            transactions={transactions}
-            onDelete={handleDelete}
-            onEdit={handleEditInModal}
-            onBulkEdit={handleBulkEditClick}
-          />
+          <div key="transactions" className="page-transition">
+            <TransactionTable
+              transactions={transactions}
+              onDelete={handleDelete}
+              onEdit={handleEditInModal}
+              onBulkEdit={handleBulkEditClick}
+              initialFilter={transactionsFilter}
+            />
+          </div>
         )}
-
+        
         {activeTab === 'calendar' && (
           <CalendarView transactions={transactions} onEdit={handleEdit} onAddDate={openAddWithDate} onCalculateBalances={handleCalculateBalances} />
         )}
