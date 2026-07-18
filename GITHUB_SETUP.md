@@ -15,11 +15,9 @@ Your Money Manager project is ready to push to GitHub!
 
 ## Step 2: Add Remote & Push Code
 
-In PowerShell, navigate to the project and run:
+In PowerShell or terminal, navigate to the project and run:
 
-```powershell
-cd C:\Users\ASUS\Desktop\money-manager
-
+```bash
 # Add your GitHub remote (replace YOUR_USERNAME with your GitHub username)
 git remote add origin https://github.com/YOUR_USERNAME/money-manager.git
 
@@ -34,89 +32,48 @@ git push -u origin main
 
 Visit: https://github.com/YOUR_USERNAME/money-manager
 
-You should see all your files and commits!
-
 ## What's Included ✅
 
 ### Structure
 ```
 money-manager/
-├── frontend/          # React + Vite Dashboard
-├── backend/           # Node.js Express API
-├── .github/workflows/ # CI/CD Pipeline
+├── api/               # Vercel Serverless Functions
+├── public/            # Static assets
+├── src/               # React + Vite Frontend
+├── scripts/           # Utility scripts
 ├── README.md          # Project documentation
 └── DEPLOYMENT.md      # Deployment guide
 ```
 
-### Git Commits (2 commits included)
-1. **chore: Initial project setup with folder structure**
-   - All project files and configuration
-
-2. **ci: Add GitHub Actions CI/CD workflow**
-   - Automated testing & building on push
-
-## Features Ready to Use ✨
-
-✅ **Dashboard** - Real-time analytics with charts
-✅ **Add/Edit Transactions** - Table format with form
-✅ **Import Excel** - Upload your transaction data
-✅ **Export** - Download as Excel or HTML
-✅ **Responsive Design** - Mobile-friendly UI
-✅ **Category Filtering** - Organize by type
-✅ **Dark Mode Ready** - Built with Tailwind
-
 ## Next Steps 🎯
 
-1. **Push to GitHub** (follow steps above)
-2. **Install Dependencies** (when ready to run locally)
+1. **Install Dependencies** (when ready to run locally)
    ```bash
-   npm run setup
+   npm install
    ```
+
+2. **Configure Environment**
+   Create a `.env.local` file with your `MONGODB_URI` and `JWT_SECRET`.
 
 3. **Start Development**
    ```bash
    npm run dev
    ```
-   - Frontend: http://localhost:3000
-   - Backend: http://localhost:5000
+   - App runs on: http://localhost:3000 (with API endpoints seamlessly routed to `/api/*`)
 
 4. **Deploy to Vercel** (see DEPLOYMENT.md)
    - Connect GitHub repo to Vercel
    - Auto-deploy on every push!
 
-## API Endpoints Ready
-
-✅ GET /api/transactions
-✅ POST /api/transactions
-✅ PUT /api/transactions/:id
-✅ DELETE /api/transactions/:id
-✅ GET /api/statistics
-✅ GET /api/export/excel
-✅ POST /api/import/excel
-
-## Database
-
-SQLite database automatically created at: `backend/money_manager.db`
-
 ## Technology Stack
 
 **Frontend:**
-- React 18
-- Vite
-- Tailwind CSS
-- Recharts
-- Axios
+- React 18, Vite, Tailwind CSS, Recharts
 
 **Backend:**
-- Express.js
-- SQLite3
+- Vercel Serverless Functions (`/api`)
+- MongoDB Atlas (via Mongoose)
 - Node.js
-
-## Support Files
-
-📄 **README.md** - Full project documentation
-📄 **DEPLOYMENT.md** - Vercel & backend hosting guide
-📄 **.github/workflows/ci.yml** - Automated CI/CD
 
 ---
 

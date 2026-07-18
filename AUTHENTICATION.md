@@ -151,18 +151,16 @@ CREATE TABLE IF NOT EXISTS users (
 
 ### For Developers
 
-**Backend Setup:**
+**Local Setup:**
 ```bash
-cd backend
-npm install  # Install new dependencies (bcryptjs, jsonwebtoken)
-npm run dev  # Start development server
+npm install  # Install full-stack dependencies
+npm run dev  # Starts Vite frontend and proxies /api to serverless functions
 ```
 
-**Environment Variables** (add to `.env`):
+**Environment Variables** (add to `.env.local`):
 ```
 MONGODB_URI=your_mongodb_connection_string  # For MongoDB
 JWT_SECRET=your_secret_key_change_in_production
-PORT=5000
 ```
 > [!CAUTION]
 > **SECURITY WARNING:** NEVER commit your `.env` or `.env.local` file to version control. Do not hardcode real database credentials or JWT secrets into your application code, test scripts, or documentation.
@@ -170,17 +168,17 @@ PORT=5000
 **Testing with curl:**
 ```bash
 # Register
-curl -X POST http://localhost:5000/api/auth/register \
+curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username":"user","email":"user@example.com","password":"pass123","confirmPassword":"pass123"}'
 
 # Login
-curl -X POST http://localhost:5000/api/auth/login \
+curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"user","password":"pass123"}'
 
 # Use token
-curl http://localhost:5000/api/transactions \
+curl http://localhost:3000/api/transactions \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
